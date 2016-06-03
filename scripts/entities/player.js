@@ -24,6 +24,40 @@ var createPlayer = function createPlayer(game, options) {
 
   var gamepad = settings.gamepad;
 
+  function downconvertDirection(direction) {
+    var newDirection;
+
+      switch (direction) {
+        case 'n':
+        case 'ne':
+        case 'nw':
+          newDirection = 'n';
+      }
+
+      switch (direction) {
+        case 's':
+        case 'se':
+        case 'sw':
+          newDirection = 's';
+      }
+
+      switch (direction) {
+        case 'w':
+        case 'nw':
+        case 'sw':
+          newDirection = 'w';
+      }
+
+      switch (direction) {
+        case 'e':
+        case 'ne':
+        case 'se':
+          newDirection = 'e';
+      }
+
+    return newDirection;
+  }
+
   var actions = {
     attack: function attack() {
       player.isAttacking = true;
@@ -38,41 +72,11 @@ var createPlayer = function createPlayer(game, options) {
       player.lastAttacked = Date.now();
 
 //      game.sfx.play('attack');
-
-      var attackDirection;
-      switch (player.orientation) {
-        case 'n':
-        case 'ne':
-        case 'nw':
-          attackDirection = 'n';
-      }
-
-      switch (player.orientation) {
-        case 's':
-        case 'se':
-        case 'sw':
-          attackDirection = 's';
-      }
-
-      switch (player.orientation) {
-        case 'w':
-        case 'nw':
-        case 'sw':
-          attackDirection = 'w';
-      }
-
-      switch (player.orientation) {
-        case 'e':
-        case 'ne':
-        case 'se':
-          attackDirection = 'e';
-      }
-
-      player.loadTexture('player-attack-' + attackDirection);
+      player.loadTexture('player-attack-' + player.orientation);
 
       setTimeout(function endAttack() {
         if (player.alive) {
-          player.loadTexture('player-walk-' + attackDirection);
+          player.loadTexture('player-walk-' + player.orientation);
         }
         player.isAttacking = false;
       }, duration);
@@ -82,14 +86,13 @@ var createPlayer = function createPlayer(game, options) {
       var maxSpeed = 32;
       var acceleration = 8;
       var animDirection;
-      player.orientation = direction;
+      player.orientation = downconvertDirection(direction);
 
       switch (direction) {
         case 'n':
         case 'ne':
         case 'nw':
           player.body.velocity.y = Math.max(player.body.velocity.y - acceleration, -maxSpeed);
-          animDirection = 'n';
       }
 
       switch (direction) {
@@ -117,9 +120,9 @@ var createPlayer = function createPlayer(game, options) {
       }
 
       if (!player.isAttacking) {
-        var texture = 'player-walk-' + animDirection;
+        var texture = 'player-walk-' + player.orientation;
         if (player.key !== texture) {
-          player.loadTexture('player-walk-' + animDirection);
+          player.loadTexture('player-walk-' + player.orientation);
         }
         player.animations.play('walk', 6, true);
       }
