@@ -1,0 +1,20 @@
+* {
+  background: black;
+  box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  image-rendering: pixelated;
+  -webkit-font-smoothing : none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+}
+
+#loading {
+  height: 100%;
+}
