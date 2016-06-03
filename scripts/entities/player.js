@@ -26,6 +26,7 @@ var createPlayer = function createPlayer(game, options) {
 
   var actions = {
     attack: function attack() {
+      player.isAttacking = true;
       var duration = 200;
       var interval = 600;
 
@@ -39,10 +40,12 @@ var createPlayer = function createPlayer(game, options) {
 //      game.sfx.play('attack');
 
       player.loadTexture('player-attack-' + player.orientation);
+
       setTimeout(function endAttack() {
         if (player.alive) {
           player.loadTexture('player-walk-' + player.orientation);
         }
+        player.isAttacking = false;
       }, duration);
     },
 
@@ -66,11 +69,13 @@ var createPlayer = function createPlayer(game, options) {
           break;
       }
 
-      var texture = 'player-walk-' + direction;
-      if (player.key !== texture) {
-        player.loadTexture('player-walk-' + direction);
+      if (!player.isAttacking) {
+        var texture = 'player-walk-' + direction;
+        if (player.key !== texture) {
+          player.loadTexture('player-walk-' + direction);
+        }
+        player.animations.play('walk', 6, true);
       }
-      player.animations.play('walk', 6, true);
     },
 
     takeDamage: function takeDamage(amount) {
