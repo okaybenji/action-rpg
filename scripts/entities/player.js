@@ -1,6 +1,6 @@
 var createPlayer = function createPlayer(game, options) {
   var defaults = {
-    orientation: 'right', // may use this for shield logic
+    orientation: 'down', // may use this for shield logic
     keys: {
       up: 'UP',
       down: 'DOWN',
@@ -8,7 +8,7 @@ var createPlayer = function createPlayer(game, options) {
       right: 'RIGHT',
       attack: 'SHIFT'
     },
-    color: 'pink',
+//    color: 'pink',
     gamepad: game.input.gamepad.pad1,
   };
 
@@ -38,10 +38,10 @@ var createPlayer = function createPlayer(game, options) {
 
 //      game.sfx.play('attack');
 
-      player.loadTexture('white');
+      player.loadTexture('player-attack-' + player.orientation);
       setTimeout(function endAttack() {
         if (player.alive) {
-          player.loadTexture(settings.color);
+          player.loadTexture('player-walk-' + player.orientation);
         }
       }, duration);
     },
@@ -65,6 +65,12 @@ var createPlayer = function createPlayer(game, options) {
           player.body.velocity.y = Math.min(player.body.velocity.y + acceleration, maxSpeed);
           break;
       }
+
+      var texture = 'player-walk-' + direction;
+      if (player.key !== texture) {
+        player.loadTexture('player-walk-' + direction);
+      }
+      player.animations.play('walk', 6, true);
     },
 
     takeDamage: function takeDamage(amount) {
@@ -78,11 +84,13 @@ var createPlayer = function createPlayer(game, options) {
 
     die: function() {
 //      game.sfx.play('die');
-        actions.endAttack();
+//        actions.endAttack();
     },
   };
 
-  var player = game.add.sprite(0, 0, settings.color);
+//  var player = game.add.sprite(0, 0, settings.color);
+  var player = game.add.sprite(0, 0, 'player-walk-down');
+  player.animations.add('walk');
   player.name = settings.name;
   player.orientation = settings.orientation;
 
@@ -148,6 +156,10 @@ var createPlayer = function createPlayer(game, options) {
     }
     applyFriction('x');
     applyFriction('y');
+
+    if (Math.abs(player.body.velocity.y) === 0 && Math.abs(player.body.velocity.x) === 0) {
+      player.animations.stop();
+    }
 
     if (input.attack) {
       actions.attack();
