@@ -17,14 +17,14 @@ var Loading = function(game) {
       game.load.image('purple', 'images/colors/purple.png');
       game.load.image('white', 'images/colors/white.png');
       game.load.image('yellow', 'images/colors/yellow.png');*/
-      game.load.spritesheet('player-walk-down', 'images/player/walk-down.png', 16, 16);
-      game.load.spritesheet('player-walk-up', 'images/player/walk-up.png', 16, 16);
-      game.load.spritesheet('player-walk-left', 'images/player/walk-left.png', 16, 16);
-      game.load.spritesheet('player-walk-right', 'images/player/walk-right.png', 16, 16);
-      game.load.image('player-attack-down', 'images/player/attack-down.png');
-      game.load.image('player-attack-up', 'images/player/attack-up.png');
-      game.load.image('player-attack-left', 'images/player/attack-left.png');
-      game.load.image('player-attack-right', 'images/player/attack-right.png');
+      game.load.spritesheet('player-walk-n', 'images/player/walk-n.png', 16, 16);
+      game.load.spritesheet('player-walk-s', 'images/player/walk-s.png', 16, 16);
+      game.load.spritesheet('player-walk-e', 'images/player/walk-e.png', 16, 16);
+      game.load.spritesheet('player-walk-w', 'images/player/walk-w.png', 16, 16);
+      game.load.image('player-attack-n', 'images/player/attack-n.png');
+      game.load.image('player-attack-s', 'images/player/attack-s.png');
+      game.load.image('player-attack-e', 'images/player/attack-e.png');
+      game.load.image('player-attack-w', 'images/player/attack-w.png');
     },
 
     create: function() {

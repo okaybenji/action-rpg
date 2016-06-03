@@ -39,11 +39,40 @@ var createPlayer = function createPlayer(game, options) {
 
 //      game.sfx.play('attack');
 
-      player.loadTexture('player-attack-' + player.orientation);
+      var attackDirection;
+      switch (player.orientation) {
+        case 'n':
+        case 'ne':
+        case 'nw':
+          attackDirection = 'n';
+      }
+
+      switch (player.orientation) {
+        case 's':
+        case 'se':
+        case 'sw':
+          attackDirection = 's';
+      }
+
+      switch (player.orientation) {
+        case 'w':
+        case 'nw':
+        case 'sw':
+          attackDirection = 'w';
+      }
+
+      switch (player.orientation) {
+        case 'e':
+        case 'ne':
+        case 'se':
+          attackDirection = 'e';
+      }
+
+      player.loadTexture('player-attack-' + attackDirection);
 
       setTimeout(function endAttack() {
         if (player.alive) {
-          player.loadTexture('player-walk-' + player.orientation);
+          player.loadTexture('player-walk-' + attackDirection);
         }
         player.isAttacking = false;
       }, duration);
@@ -52,27 +81,45 @@ var createPlayer = function createPlayer(game, options) {
     run: function run(direction) {
       var maxSpeed = 32;
       var acceleration = 8;
+      var animDirection;
       player.orientation = direction;
 
       switch (direction) {
-        case 'left':
-          player.body.velocity.x = Math.max(player.body.velocity.x - acceleration, -maxSpeed);
-          break;
-        case 'right':
-          player.body.velocity.x = Math.min(player.body.velocity.x + acceleration, maxSpeed);
-          break;
-        case 'up':
+        case 'n':
+        case 'ne':
+        case 'nw':
           player.body.velocity.y = Math.max(player.body.velocity.y - acceleration, -maxSpeed);
-          break;
-        case 'down':
+          animDirection = 'n';
+      }
+
+      switch (direction) {
+        case 's':
+        case 'se':
+        case 'sw':
           player.body.velocity.y = Math.min(player.body.velocity.y + acceleration, maxSpeed);
-          break;
+          animDirection = 's';
+      }
+
+      switch (direction) {
+        case 'w':
+        case 'nw':
+        case 'sw':
+          player.body.velocity.x = Math.max(player.body.velocity.x - acceleration, -maxSpeed);
+          animDirection = 'w';
+      }
+
+      switch (direction) {
+        case 'e':
+        case 'ne':
+        case 'se':
+          player.body.velocity.x = Math.min(player.body.velocity.x + acceleration, maxSpeed);
+          animDirection = 'e';
       }
 
       if (!player.isAttacking) {
-        var texture = 'player-walk-' + direction;
+        var texture = 'player-walk-' + animDirection;
         if (player.key !== texture) {
-          player.loadTexture('player-walk-' + direction);
+          player.loadTexture('player-walk-' + animDirection);
         }
         player.animations.play('walk', 6, true);
       }
@@ -94,7 +141,7 @@ var createPlayer = function createPlayer(game, options) {
   };
 
 //  var player = game.add.sprite(0, 0, settings.color);
-  var player = game.add.sprite(0, 0, 'player-walk-down');
+  var player = game.add.sprite(0, 0, 'player-walk-s');
   player.animations.add('walk');
   player.name = settings.name;
   player.orientation = settings.orientation;
@@ -137,16 +184,31 @@ var createPlayer = function createPlayer(game, options) {
               gamepad.justPressed(Phaser.Gamepad.XBOX360_RIGHT_TRIGGER),
     };
 
-    if (input.left && !input.right) {
-      actions.run('left');
-    } else if (input.right && !input.left) {
-      actions.run('right');
-    }
-
-    if (input.up && !input.down) {
-      actions.run('up');
-    } else if (input.down && !input.up) {
-      actions.run('down');
+    switch (true) {
+      case input.up && !input.down && !input.left && !input.right:
+        actions.run('n');
+        break;
+      case !input.up && input.down && !input.left && !input.right:
+        actions.run('s');
+        break;
+      case !input.up && !input.down && !input.left && input.right:
+        actions.run('e');
+        break;
+      case !input.up && !input.down && input.left && !input.right:
+        actions.run('w');
+        break;
+      case input.up && !input.down && !input.left && input.right:
+        actions.run('ne');
+        break;
+      case input.up && !input.down && input.left && !input.right:
+        actions.run('nw');
+        break;
+      case !input.up && input.down && !input.left && input.right:
+        actions.run('se');
+        break;
+      case !input.up && input.down && input.left && !input.right:
+        actions.run('sw');
+        break;
     }
 
     // apply friction
