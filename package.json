@@ -1,0 +1,23 @@
+{
+  "name": "action-rpg",
+  "version": "0.0.1",
+  "description": "this is a test.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node scripts/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/okaybenji/action-rpg.git"
+  },
+  "author": "Benji Kay <okaybenji@gmail.com> (http://benjikay.com)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/okaybenji/action-rpg/issues"
+  },
+  "homepage": "https://github.com/okaybenji/action-rpg",
+  "dependencies": {
+    "ws": "^1.1.0"
+  }
+}
