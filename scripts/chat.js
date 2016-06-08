@@ -1,8 +1,18 @@
 const input = document.querySelector('#chat input');
 
+document.onkeyup = function(event) {
+  if (event.keyCode === 84) { // 't'
+    input.classList.remove('hidden');
+    input.disabled = false;
+    input.focus();
+  }
+};
+
 input.onkeydown = function(event) {
-  if (event.keyCode == 13) { // enter
+  if (event.keyCode === 13) { // enter
     chat.send(input.value);
+    input.disabled = true;
+    input.classList.add('hidden');
     input.value = '';
   }
 };
@@ -21,7 +31,7 @@ const chat = {
     output.appendChild(msgElement);
 
     setTimeout(function() {
-      msgElement.className += 'fade';
+      msgElement.classList.add('fade');
     }, duration - fadeTime);
 
     setTimeout(function() {
