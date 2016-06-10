@@ -25,7 +25,7 @@ wss.on('connection', function connection(ws) {
   ws.x = utils.randomIntBetween(0, 256);
   ws.y = utils.randomIntBetween(0, 240);
 
-  console.log(id + ' connected');
+  console.log(id + ' connected. spawning at ' + ws.x + ',' + ws.y + '.');
   wss.broadcast({type: 'chat', text: id + ' connected'});
 
   // inform client of its id
@@ -39,12 +39,6 @@ wss.on('connection', function connection(ws) {
     if (client.id === id) {
       return; // don't spawn ourself yet
     }
-    console.log('sending spawn to ' + id, {
-      type: 'spawn',
-      id: client.id,
-      x: client.x,
-      y: client.y
-    });
     ws.send(JSON.stringify({
       type: 'spawn',
       id: client.id,
@@ -54,12 +48,6 @@ wss.on('connection', function connection(ws) {
   });
 
   // broadcast our own position (and spawn)
-  console.log('broadcasting spawn:', {
-    type: 'spawn',
-    id,
-    x: ws.x,
-    y: ws.y
-  });
   wss.broadcast({
     type: 'spawn',
     id,
@@ -77,16 +65,9 @@ wss.on('connection', function connection(ws) {
           text: id + ': ' + msg.text
         });
         break;
-      case 'spawn':
-        console.log(id + ' spawned at ' + msg.x + ',' + msg.y);
-        ws.x = msg.x;
-        ws.y = msg.y;
-        wss.broadcast({
-          id: id,
-          type: 'spawn',
-          x: msg.x,
-          y: msg.y
-        });
+      case 'move':
+        // TODO: implement movement code!
+        break;
     }
   });
 });
