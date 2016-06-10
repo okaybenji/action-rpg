@@ -19,11 +19,7 @@ input.onkeydown = function(event) {
 
 const chat = {
   send(text) {
-    const msg = JSON.stringify({
-      type: 'chat',
-      text
-    });
-    ws.send(msg);
+    socket.send({ type: 'chat', text });
   },
   log(text) {
     // displays a message, then fades out and removes it

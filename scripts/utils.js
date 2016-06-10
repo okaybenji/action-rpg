@@ -14,6 +14,12 @@ var utils = {
 		if (callNow) func.apply(context, args);
 	};
   },
+
+  randomIntBetween(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  }
 };
 
-//module.exports = utils;
+if (typeof module !== 'undefined') {
+  module.exports = utils;
+}

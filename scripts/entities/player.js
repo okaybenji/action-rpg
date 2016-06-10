@@ -1,5 +1,7 @@
 var createPlayer = function createPlayer(game, options) {
   var defaults = {
+    x: utils.randomIntBetween(0, game.width),
+    y: utils.randomIntBetween(0, game.height),
     orientation: 'down', // may use this for shield logic
     keys: {
       up: 'UP',
@@ -148,6 +150,8 @@ var createPlayer = function createPlayer(game, options) {
   player.animations.add('walk');
   player.name = settings.name;
   player.orientation = settings.orientation;
+  player.x = settings.x;
+  player.y = settings.y;
 
   // track health
   player.hp = player.maxHp = 6;
