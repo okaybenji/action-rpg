@@ -4,8 +4,10 @@ const WebSocketServer = require('ws').Server;
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.broadcast = function broadcast(data) {
-  wss.clients.forEach(function each(client) {
-    client.send(data);
+  const msg = JSON.stringify(data);
+
+  wss.clients.forEach(function(client) {
+    client.send(msg);
   });
 };
 
@@ -18,10 +20,20 @@ const idGen = (function() {
 
 wss.on('connection', function connection(ws) {
   const id = idGen();
-  wss.broadcast(id + ' connected');
+
+  console.log(id + ' connected');
+  wss.broadcast({type: 'chat', text: id + ' connected'});
+
   ws.on('message', function incoming(message) {
-    const messageText = id + ': ' + message;
-    console.log(messageText);
-    wss.broadcast(messageText);
+    const msg = JSON.parse(message);
+    switch (msg.type) {
+      case 'chat':
+        console.log(id + ': ' + msg.text);
+        wss.broadcast({
+          type: 'chat',
+          text: id + ': ' + msg.text
+        });
+        break;
+    }
   });
 });

@@ -18,16 +18,20 @@ input.onkeydown = function(event) {
 };
 
 const chat = {
-  send(msg) {
+  send(text) {
+    const msg = JSON.stringify({
+      type: 'chat',
+      text
+    });
     ws.send(msg);
   },
-  log(msg) {
+  log(text) {
     // displays a message, then fades out and removes it
     const output = document.querySelector('#chat #messages');
     const duration = 8000;
     const fadeTime = 2000;
     const msgElement = document.createElement('li');
-    msgElement.textContent = msg;
+    msgElement.textContent = text;
     output.appendChild(msgElement);
 
     setTimeout(function() {
