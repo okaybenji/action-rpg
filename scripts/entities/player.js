@@ -224,34 +224,7 @@ var createPlayer = function createPlayer(game, options) {
               gamepad.justPressed(Phaser.Gamepad.XBOX360_RIGHT_TRIGGER),
     };
 
-    switch (true) {
-      case input.up && !input.down && !input.left && !input.right:
-        actions.walk('n');
-        break;
-      case !input.up && input.down && !input.left && !input.right:
-        actions.walk('s');
-        break;
-      case !input.up && !input.down && !input.left && input.right:
-        actions.walk('e');
-        break;
-      case !input.up && !input.down && input.left && !input.right:
-        actions.walk('w');
-        break;
-      case input.up && !input.down && !input.left && input.right:
-        actions.walk('ne');
-        break;
-      case input.up && !input.down && input.left && !input.right:
-        actions.walk('nw');
-        break;
-      case !input.up && input.down && !input.left && input.right:
-        actions.walk('se');
-        break;
-      case !input.up && input.down && input.left && !input.right:
-        actions.walk('sw');
-        break;
-      default:
-        actions.walk(false);
-    }
+    actions.walk(movement.player.inputToDirection(input));
 
     var position = physics.getPosition({x: player.x, y: player.y}, velocity, game.time.elapsed);
     player.x = position.x;
