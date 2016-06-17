@@ -9,4 +9,6 @@ const physics = {
   }
 };
 
-// module.exports = physics;
+if (typeof module !== 'undefined') {
+  module.exports = physics;
+}

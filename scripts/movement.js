@@ -1,5 +1,3 @@
-// TODO: process server physics with these methods, too!
-
 const movement = {
   player: {
     inputToDirection(input) {
@@ -25,7 +23,7 @@ const movement = {
       }
     },
     directionToVelocity(direction) {
-      const moveSpeed = globalSettings.player.speed;
+      const moveSpeed = 0.05;
 
       switch (direction) {
         case 'n':
@@ -59,4 +57,6 @@ const movement = {
   }
 };
 
-// module.exports = movement;
+if (typeof module !== 'undefined') {
+  module.exports = movement;
+}

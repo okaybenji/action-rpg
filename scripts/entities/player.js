@@ -101,6 +101,7 @@ var createPlayer = function createPlayer(game, options) {
           }
           player.animations.play('walk', 6, true);
         }
+        console.log('pos:' + player.x + ',' + player.y);
       } else {
         player.animations.stop();
       }
