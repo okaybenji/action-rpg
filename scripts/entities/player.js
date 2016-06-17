@@ -10,7 +10,6 @@ var createPlayer = function createPlayer(game, options) {
       right: 'RIGHT',
       attack: 'SHIFT'
     },
-//    color: 'pink',
     gamepad: game.input.gamepad.pad1,
   };
 
@@ -25,6 +24,7 @@ var createPlayer = function createPlayer(game, options) {
   };
 
   var gamepad = settings.gamepad;
+  var velocity = {x: 0, y: 0};
 
   function downconvertDirection(direction) {
     var newDirection;
@@ -84,49 +84,74 @@ var createPlayer = function createPlayer(game, options) {
       }, duration);
     },
 
-    run: function run(direction) {
-      var maxSpeed = 32;
-      var acceleration = 8;
-      var animDirection;
-      player.orientation = downconvertDirection(direction);
+    walk: function walk(direction) {
+      var maxSpeed = 0.05;
+
+      if (direction) {
+        player.orientation = downconvertDirection(direction);
+        if (!player.isAttacking) {
+          var texture = 'player-walk-' + player.orientation;
+          if (player.key !== texture) {
+            player.loadTexture('player-walk-' + player.orientation);
+          }
+          player.animations.play('walk', 6, true);
+        }
+      } else {
+        player.animations.stop();
+      }
 
       switch (direction) {
         case 'n':
+          velocity.x = 0;
+          velocity.y = -maxSpeed;
+          break;
         case 'ne':
+          velocity.x = maxSpeed;
+          velocity.y = -maxSpeed;
+          break;
         case 'nw':
-          player.body.velocity.y = Math.max(player.body.velocity.y - acceleration, -maxSpeed);
-      }
-
-      switch (direction) {
+          velocity.x = -maxSpeed;
+          velocity.y = -maxSpeed;
+          break;
         case 's':
+          velocity.x = 0;
+          velocity.y = maxSpeed;
+          break;
         case 'se':
+          velocity.x = maxSpeed;
+          velocity.y = maxSpeed;
+          break;
         case 'sw':
-          player.body.velocity.y = Math.min(player.body.velocity.y + acceleration, maxSpeed);
-          animDirection = 's';
-      }
-
-      switch (direction) {
+          velocity.x = -maxSpeed;
+          velocity.y = maxSpeed;
+          break;
         case 'w':
+          velocity.x = -maxSpeed;
+          velocity.y = 0;
+          break;
         case 'nw':
+          velocity.x = -maxSpeed;
+          velocity.y = -maxSpeed;
+          break;
         case 'sw':
-          player.body.velocity.x = Math.max(player.body.velocity.x - acceleration, -maxSpeed);
-          animDirection = 'w';
-      }
-
-      switch (direction) {
+          velocity.x = -maxSpeed;
+          velocity.y = maxSpeed;
+          break;
         case 'e':
+          velocity.x = maxSpeed;
+          velocity.y = 0;
+          break;
         case 'ne':
+          velocity.x = maxSpeed;
+          velocity.y = -maxSpeed;
+          break;
         case 'se':
-          player.body.velocity.x = Math.min(player.body.velocity.x + acceleration, maxSpeed);
-          animDirection = 'e';
-      }
-
-      if (!player.isAttacking) {
-        var texture = 'player-walk-' + player.orientation;
-        if (player.key !== texture) {
-          player.loadTexture('player-walk-' + player.orientation);
-        }
-        player.animations.play('walk', 6, true);
+          velocity.x = maxSpeed;
+          velocity.y = maxSpeed;
+          break;
+        default:
+          velocity.x = 0;
+          velocity.y = 0;
       }
     },
 
@@ -140,12 +165,11 @@ var createPlayer = function createPlayer(game, options) {
     },
 
     die: function() {
-//      game.sfx.play('die');
-//        actions.endAttack();
+      // game.sfx.play('die');
+      // actions.endAttack();
     },
   };
 
-//  var player = game.add.sprite(0, 0, settings.color);
   var player = game.add.sprite(0, 0, 'player-walk-s');
   player.animations.add('walk');
   player.name = settings.name;
@@ -156,10 +180,6 @@ var createPlayer = function createPlayer(game, options) {
   // track health
   player.hp = player.maxHp = 6;
   player.actions = actions;
-
-  game.physics.arcade.enable(player);
-  player.body.collideWorldBounds = true;
-  player.body.gravity.y = 0;
 
   player.lastAttacked = 0;
 
@@ -193,47 +213,36 @@ var createPlayer = function createPlayer(game, options) {
 
     switch (true) {
       case input.up && !input.down && !input.left && !input.right:
-        actions.run('n');
+        actions.walk('n');
         break;
       case !input.up && input.down && !input.left && !input.right:
-        actions.run('s');
+        actions.walk('s');
         break;
       case !input.up && !input.down && !input.left && input.right:
-        actions.run('e');
+        actions.walk('e');
         break;
       case !input.up && !input.down && input.left && !input.right:
-        actions.run('w');
+        actions.walk('w');
         break;
       case input.up && !input.down && !input.left && input.right:
-        actions.run('ne');
+        actions.walk('ne');
         break;
       case input.up && !input.down && input.left && !input.right:
-        actions.run('nw');
+        actions.walk('nw');
         break;
       case !input.up && input.down && !input.left && input.right:
-        actions.run('se');
+        actions.walk('se');
         break;
       case !input.up && input.down && input.left && !input.right:
-        actions.run('sw');
+        actions.walk('sw');
         break;
+      default:
+        actions.walk(false);
     }
 
-    // apply friction
-    function applyFriction(axis) {      
-      if (Math.abs(player.body.velocity[axis]) < 2) {
-        player.body.velocity[axis] *= 0.5; // quickly bring slow-moving players to a stop
-      } else if (player.body.velocity[axis] > 0) {
-        player.body.velocity[axis] -= 2;
-      } else if (player.body.velocity[axis] < 0) {
-        player.body.velocity[axis] += 2;
-      }
-    }
-    applyFriction('x');
-    applyFriction('y');
-
-    if (Math.abs(player.body.velocity.y) === 0 && Math.abs(player.body.velocity.x) === 0) {
-      player.animations.stop();
-    }
+    var position = physics.getPosition({x: player.x, y: player.y}, velocity, game.time.elapsed);
+    player.x = position.x;
+    player.y = position.y;
 
     if (input.attack) {
       actions.attack();

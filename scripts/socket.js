@@ -31,5 +31,5 @@ const createSocket = function() {
       const msg = JSON.stringify(message);
       ws.send(msg);
     }
-  }
+  };
 };
