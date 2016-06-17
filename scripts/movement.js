@@ -1,3 +1,5 @@
+// TODO: process server physics with these methods, too!
+
 const movement = {
   player: {
     inputToDirection(input) {
@@ -20,6 +22,38 @@ const movement = {
           return 'sw';
         default:
           return undefined;
+      }
+    },
+    directionToVelocity(direction) {
+      const moveSpeed = globalSettings.player.speed;
+
+      switch (direction) {
+        case 'n':
+          return {x: 0, y: -moveSpeed};
+        case 'ne':
+          return {x: moveSpeed, y: -moveSpeed};
+        case 'nw':
+          return {x: -moveSpeed, y: -moveSpeed};
+        case 's':
+          return {x: 0, y: moveSpeed};
+        case 'se':
+          return {x: moveSpeed, y: moveSpeed};
+        case 'sw':
+          return {x: -moveSpeed, y: moveSpeed};
+        case 'w':
+          return {x: -moveSpeed, y: 0};
+        case 'nw':
+          return {x: -moveSpeed, y: -moveSpeed};
+        case 'sw':
+          return {x: -moveSpeed, y: moveSpeed};
+        case 'e':
+          return {x: moveSpeed, y: 0};
+        case 'ne':
+          return {x: moveSpeed, y: -moveSpeed};
+        case 'se':
+          return {x: moveSpeed, y: moveSpeed};
+        default:
+          return {x: 0, y: 0};
       }
     }
   }

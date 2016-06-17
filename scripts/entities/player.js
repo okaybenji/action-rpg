@@ -92,8 +92,6 @@ var createPlayer = function createPlayer(game, options) {
     },
 
     walk: function walk(direction) {
-      var moveSpeed = globalSettings.player.speed;
-
       if (direction) {
         player.orientation = downconvertDirection(direction);
         if (!player.isAttacking) {
@@ -107,59 +105,7 @@ var createPlayer = function createPlayer(game, options) {
         player.animations.stop();
       }
 
-      switch (direction) {
-        case 'n':
-          velocity.x = 0;
-          velocity.y = -moveSpeed;
-          break;
-        case 'ne':
-          velocity.x = moveSpeed;
-          velocity.y = -moveSpeed;
-          break;
-        case 'nw':
-          velocity.x = -moveSpeed;
-          velocity.y = -moveSpeed;
-          break;
-        case 's':
-          velocity.x = 0;
-          velocity.y = moveSpeed;
-          break;
-        case 'se':
-          velocity.x = moveSpeed;
-          velocity.y = moveSpeed;
-          break;
-        case 'sw':
-          velocity.x = -moveSpeed;
-          velocity.y = moveSpeed;
-          break;
-        case 'w':
-          velocity.x = -moveSpeed;
-          velocity.y = 0;
-          break;
-        case 'nw':
-          velocity.x = -moveSpeed;
-          velocity.y = -moveSpeed;
-          break;
-        case 'sw':
-          velocity.x = -moveSpeed;
-          velocity.y = moveSpeed;
-          break;
-        case 'e':
-          velocity.x = moveSpeed;
-          velocity.y = 0;
-          break;
-        case 'ne':
-          velocity.x = moveSpeed;
-          velocity.y = -moveSpeed;
-          break;
-        case 'se':
-          velocity.x = moveSpeed;
-          velocity.y = moveSpeed;
-          break;
-        default:
-          velocity.x = 0;
-          velocity.y = 0;
-      }
+      velocity = movement.player.directionToVelocity(direction);
     },
 
     takeDamage: function takeDamage(amount) {
