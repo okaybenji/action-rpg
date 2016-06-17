@@ -24,6 +24,13 @@ var createPlayer = function createPlayer(game, options) {
   };
 
   var gamepad = settings.gamepad;
+  var lastInputSampleTime = 0;
+  var lastInputUploadTime = 0;
+  // lastInputUploadLatestSampleTime is the most recent sample time in inputHistory (the time from the last element in the array)
+  // TODO: come up with a better name
+  var lastInputUploadLatestSampleTime = 0; 
+  var lastInputSample;
+  var inputHistory = [];
   var velocity = {x: 0, y: 0};
 
   function downconvertDirection(direction) {
@@ -85,7 +92,7 @@ var createPlayer = function createPlayer(game, options) {
     },
 
     walk: function walk(direction) {
-      var maxSpeed = 0.05;
+      var moveSpeed = globalSettings.player.speed;
 
       if (direction) {
         player.orientation = downconvertDirection(direction);
@@ -103,51 +110,51 @@ var createPlayer = function createPlayer(game, options) {
       switch (direction) {
         case 'n':
           velocity.x = 0;
-          velocity.y = -maxSpeed;
+          velocity.y = -moveSpeed;
           break;
         case 'ne':
-          velocity.x = maxSpeed;
-          velocity.y = -maxSpeed;
+          velocity.x = moveSpeed;
+          velocity.y = -moveSpeed;
           break;
         case 'nw':
-          velocity.x = -maxSpeed;
-          velocity.y = -maxSpeed;
+          velocity.x = -moveSpeed;
+          velocity.y = -moveSpeed;
           break;
         case 's':
           velocity.x = 0;
-          velocity.y = maxSpeed;
+          velocity.y = moveSpeed;
           break;
         case 'se':
-          velocity.x = maxSpeed;
-          velocity.y = maxSpeed;
+          velocity.x = moveSpeed;
+          velocity.y = moveSpeed;
           break;
         case 'sw':
-          velocity.x = -maxSpeed;
-          velocity.y = maxSpeed;
+          velocity.x = -moveSpeed;
+          velocity.y = moveSpeed;
           break;
         case 'w':
-          velocity.x = -maxSpeed;
+          velocity.x = -moveSpeed;
           velocity.y = 0;
           break;
         case 'nw':
-          velocity.x = -maxSpeed;
-          velocity.y = -maxSpeed;
+          velocity.x = -moveSpeed;
+          velocity.y = -moveSpeed;
           break;
         case 'sw':
-          velocity.x = -maxSpeed;
-          velocity.y = maxSpeed;
+          velocity.x = -moveSpeed;
+          velocity.y = moveSpeed;
           break;
         case 'e':
-          velocity.x = maxSpeed;
+          velocity.x = moveSpeed;
           velocity.y = 0;
           break;
         case 'ne':
-          velocity.x = maxSpeed;
-          velocity.y = -maxSpeed;
+          velocity.x = moveSpeed;
+          velocity.y = -moveSpeed;
           break;
         case 'se':
-          velocity.x = maxSpeed;
-          velocity.y = maxSpeed;
+          velocity.x = moveSpeed;
+          velocity.y = moveSpeed;
           break;
         default:
           velocity.x = 0;
@@ -195,8 +202,7 @@ var createPlayer = function createPlayer(game, options) {
               gamepad.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_X) > 0.1 ||
               gamepad.axis(Phaser.Gamepad.XBOX360_STICK_RIGHT_X) > 0.1,
       up:     keys.up.isDown ||
-              gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_UP) ||
-              gamepad.isDown(Phaser.Gamepad.XBOX360_A),
+              gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_UP),
       down:   keys.down.isDown ||
               gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_DOWN) ||
               gamepad.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_Y) > 0.1 ||
@@ -204,6 +210,7 @@ var createPlayer = function createPlayer(game, options) {
       attack: keys.attack.isDown ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_X) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_Y) ||
+              gamepad.isDown(Phaser.Gamepad.XBOX360_A) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_B) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_LEFT_BUMPER) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_LEFT_TRIGGER) ||
@@ -246,6 +253,32 @@ var createPlayer = function createPlayer(game, options) {
 
     if (input.attack) {
       actions.attack();
+    }
+
+    // store player input at fixed intervals
+    var inputSamplesPerSecond = 25;
+    var inputSampleInterval = 1000 / inputSamplesPerSecond;
+    if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
+      // store current player input if it has changed since the last sample
+      if (!utils.objectsAreEqual(lastInputSample, input)) {
+        inputHistory.push({input, time: game.time.now});
+        lastInputSample = input;
+      }
+      lastInputSampleTime = game.time.now;
+    }
+    
+    // send stored input to server at fixed intervals
+    // TODO: on server response, clear out any history server has processed
+    var inputUploadPerSecond = 6;
+    var inputUploadInterval = 1000 / inputUploadPerSecond;
+    if (game.time.now >= lastInputUploadTime + inputUploadInterval) {
+      // upload player input history if it has been updated since the last upload and is not empty
+      if (inputHistory.length && inputHistory[inputHistory.length - 1].time > lastInputUploadLatestSampleTime) {
+        console.log('sending inputHistory with length:', inputHistory.length);
+        socket.send({type: 'move', inputHistory});
+      }
+      lastInputUploadTime = game.time.now;
+      lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
     }
   };
 

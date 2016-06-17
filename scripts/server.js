@@ -67,6 +67,7 @@ wss.on('connection', function connection(ws) {
         break;
       case 'move':
         // TODO: implement movement code!
+        console.log(id + ' last move: ' + JSON.stringify(msg.inputHistory[msg.inputHistory.length - 1]));
         break;
     }
   });

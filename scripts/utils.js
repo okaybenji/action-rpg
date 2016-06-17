@@ -17,6 +17,10 @@ var utils = {
 
   randomIntBetween(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
+  },
+
+  objectsAreEqual(objA, objB) {
+    return JSON.stringify(objA) === JSON.stringify(objB);
   }
 };
 
