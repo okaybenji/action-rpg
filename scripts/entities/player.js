@@ -190,8 +190,14 @@ var createPlayer = function createPlayer(game, options) {
 
   player.lastAttacked = 0;
 
-  player.update = function() {
+  player.clearInputHistoryBeforeTime = function(time) {
+    const inputHistoryAfterTime = function(time) {
+      return inputHistory.filter(inputSample => inputSample.time > time);
+    };
+    inputHistory = inputHistoryAfterTime(time);
+  };
 
+  player.update = function() {
     var input = {
       left:   (keys.left.isDown && !keys.right.isDown) ||
               (gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_LEFT) && !gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_RIGHT)) ||
@@ -276,9 +282,9 @@ var createPlayer = function createPlayer(game, options) {
       if (inputHistory.length && inputHistory[inputHistory.length - 1].time > lastInputUploadLatestSampleTime) {
         console.log('sending inputHistory with length:', inputHistory.length);
         socket.send({type: 'move', inputHistory});
+        lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
       }
       lastInputUploadTime = game.time.now;
-      lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
     }
   };
 

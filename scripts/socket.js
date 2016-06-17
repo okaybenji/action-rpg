@@ -15,13 +15,16 @@ const createSocket = function() {
         chat.log(msg.text);
         break;
       case 'spawn':
-        // don't spawn a player more than once! // TODO: uh why would this happen anyway?
+        // don't spawn a player more than once! // TODO: is this protection necessary?
         if (players[msg.id]) {
           console.warn('tried to recreate player with id:', msg.id);
           break;
         }
 
         players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y});
+        break;
+      case 'move':
+        players[msg.id].clearInputHistoryBeforeTime(msg.time);
         break;
     }
   };

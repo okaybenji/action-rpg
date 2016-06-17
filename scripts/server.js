@@ -28,23 +28,21 @@ wss.on('connection', function connection(ws) {
   console.log(id + ' connected. spawning at ' + ws.x + ',' + ws.y + '.');
   wss.broadcast({type: 'chat', text: id + ' connected'});
 
+  // we always want to stringify our data
+  // TODO: is there an elegant way to override ws.send to always stringify?
+  ws.sendStr = function(msg) {
+    ws.send(JSON.stringify(msg));
+  };
+
   // inform client of its id
-  ws.send(JSON.stringify({
-    type: 'id',
-    id
-  }));
+  ws.sendStr({ type: 'id', id });
 
   // spawn all existing players on client
   wss.clients.forEach(function(client) {
     if (client.id === id) {
       return; // don't spawn ourself yet
     }
-    ws.send(JSON.stringify({
-      type: 'spawn',
-      id: client.id,
-      x: client.x,
-      y: client.y
-    }));
+    ws.sendStr({ type: 'spawn', id: client.id, x: client.x, y: client.y });
   });
 
   // broadcast our own position (and spawn)
@@ -66,8 +64,19 @@ wss.on('connection', function connection(ws) {
         });
         break;
       case 'move':
-        // TODO: implement movement code!
-        console.log(id + ' last move: ' + JSON.stringify(msg.inputHistory[msg.inputHistory.length - 1]));
+        // For now, we'll just respond with the latest input time so the client can purge any history
+        // the server has already seen.
+        // TODO: process the input history to determine the player's current position and send that
+        // back along with the time
+        const lastProcessedInputTime = msg.inputHistory[msg.inputHistory.length - 1].time;
+        // TODO: is there any reason we need to send ws.id long-term?
+        // right now we do because the client doesn't differentiate between itself and other players,
+        // but eventually the move message for the player will only go back to that player.
+        // of course we'll also have move msgs for other players... so we could either rename 'move'
+        // to two messages like 'moveClient' and 'moveOther' or we could use the id or some other property
+        // to tell client who it's moving/whether to clear the old input history...
+        ws.sendStr({ type: 'move', time: lastProcessedInputTime, id: ws.id });
+        console.log(id + ' last move at: ' + lastProcessedInputTime);
         break;
     }
   });
