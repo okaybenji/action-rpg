@@ -33,6 +33,10 @@ wss.on('connection', function connection(ws) {
   // we always want to stringify our data
   // TODO: is there an elegant way to override ws.send to always stringify?
   ws.sendStr = function(msg) {
+    console.log('sendstr:', msg);
+    if (wss.clients.indexOf(ws) === -1) {
+      return;
+    }
     ws.send(JSON.stringify(msg));
   };
 
@@ -53,6 +57,14 @@ wss.on('connection', function connection(ws) {
     id,
     x: ws.x,
     y: ws.y
+  });
+
+  ws.on('close', function() {
+    wss.clients.splice(wss.clients.indexOf(ws), 1)
+    wss.broadcast({
+      type: 'destroy',
+      id: id
+    });
   });
 
   // TODO: use strategy pattern here instead of storing logic in a switch
@@ -95,7 +107,10 @@ wss.on('connection', function connection(ws) {
         if (ws.x !== ws.lastProcessedInput.position.x || ws.y !== ws.lastProcessedInput.position.y) {
           response.position = {x: ws.x, y: ws.y};
         }
-        ws.sendStr(response);
+        // debugging: simulate lag by wrapping this in a timeout
+        setTimeout(function() {
+          ws.sendStr(response);
+        }, 250);
         console.log(id + ' last move to: ' + ws.x + ',' + ws.y);
         console.log(id + ' last move at: ' + ws.lastProcessedInput.time);
         break;

@@ -5,7 +5,7 @@ const createSocket = function() {
 
   ws.onmessage = function(data, flags) {
     const msg = JSON.parse(data.data);
-    console.log('received message:', msg);
+//    console.log('received message:', msg);
 
     switch (msg.type) {
       case 'id':
@@ -23,9 +23,15 @@ const createSocket = function() {
 
         players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y});
         break;
+      case 'destroy':
+        if (players[msg.id]) {
+          players[msg.id].destroy();
+        }
+        break;
       case 'move':
         // if the server sent us a corrected position, reconcile it
         if (msg.position) {
+          // debugging: disable reconciliation
           players[msg.id].syncPositionWithServer(msg.time, msg.position);
         }
         players[msg.id].clearInputHistoryBeforeTime(msg.time);

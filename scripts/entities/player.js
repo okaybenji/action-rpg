@@ -145,13 +145,15 @@ var createPlayer = function createPlayer(game, options) {
    */
   // TODO: interpolate and changes smoothly over time
   // TODO: huh, the reconciliation (playing back recorded input since 'time') isn't working... for
-  // some reason, clearInputHistoryBeforeTime seems to be wiping out the history since time as well
+  // some reason, local inputHistory only ever has history up to (not beyond) server time :/ ??
   player.syncPositionWithServer = function(serverTime, serverPositionAtTime) {
     // TODO: discard any server data with time we don't have because it's old/out of order?
     // move player back to prior position by server authority
     player.x = serverPositionAtTime.x;
     player.y = serverPositionAtTime.y;
 
+    console.log('server time:', serverTime);
+    console.log('most recent sampled input time:', inputHistory[inputHistory.length - 1]);
     // update the captured position stored in inputHistory with the corrected value from the server
     inputHistory = inputHistory.map(inputSample => {
       if (inputSample.time === serverTime) {
@@ -171,7 +173,7 @@ var createPlayer = function createPlayer(game, options) {
   player.clearInputHistoryBeforeTime = function(time) {
     console.log('clearing input history before time:', time);
     const inputHistorySinceTime = function(time) {
-      return inputHistory.filter(inputSample => inputSample.time >= time);
+      return inputHistory.filter(inputSample => inputSample.time > time);
     };
     inputHistory = inputHistorySinceTime(time);
   };
@@ -220,15 +222,9 @@ var createPlayer = function createPlayer(game, options) {
     var inputSamplesPerSecond = 25;
     var inputSampleInterval = 1000 / inputSamplesPerSecond;
     if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
-      // store current player input if it has changed since the last sample
+      // TODO: only store current player input if it has changed since the last sample, e.g.:
       if (!utils.objectsAreEqual(lastInputSample, input)) {
-        // TODO: experiment with only predicting client movement with each input sample
-//        // client-side prediction:
-//        actions.walk(movement.player.inputToDirection(input));
-//        var position = physics.getPosition({x: player.x, y: player.y}, velocity, game.time.elapsed);
-//        player.x = position.x;
-//        player.y = position.y;
-
+      // NOTE that this will mean making confusing updates to position reconciliation
         // TODO: consider removing position from input sample data before sending to server
         // and checking on client whether server position disagrees with client historical position
         // (instead of performing this check on the server)
