@@ -24,6 +24,7 @@ const createSocket = function() {
         players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y});
         break;
       case 'move':
+        players[msg.id].syncPositionWithServer(msg.time, msg.position);
         players[msg.id].clearInputHistoryBeforeTime(msg.time);
         break;
     }

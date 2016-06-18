@@ -101,12 +101,10 @@ var createPlayer = function createPlayer(game, options) {
           }
           player.animations.play('walk', 6, true);
         }
-        console.log('pos:' + player.x + ',' + player.y);
+        // console.log('pos:' + player.x + ',' + player.y);
       } else {
         player.animations.stop();
       }
-
-      velocity = movement.player.directionToVelocity(direction);
     },
 
     takeDamage: function takeDamage(amount) {
@@ -136,6 +134,52 @@ var createPlayer = function createPlayer(game, options) {
   player.actions = actions;
 
   player.lastAttacked = 0;
+
+  /**
+   * Compare what the server says the player's position should be at the most recent
+   * time we've gotten back from the server to what the position was on the client
+   * at that time. If the positions differ, recalculate the player's current position
+   * using the server-calculated position as the starting point and reconciling
+   * (reapplying any inputs in history since then).
+   * See: http://www.gabrielgambetta.com/fpm_live.html
+   */
+  // TODO: interpolate and changes smoothly over time
+  // TODO: huh, the reconciliation (playing back recorded input since 'time') isn't working... for
+  // some reason, clearInputHistoryBeforeTime seems to be wiping out the history since time as well
+  player.syncPositionWithServer = function(time, serverPositionAtTime) {
+    // TODO: discard any server data with time we don't have because it's old/out of order?
+    const inputSampleAtTime = inputHistory.find(inputSample => inputSample.time === time);
+    const localPositionAtTime = inputSampleAtTime.position;
+
+    if (utils.objectsAreEqual(localPositionAtTime, serverPositionAtTime)) {
+      console.log('match! returning');
+      return;
+    }
+
+    // move player back to prior position by server authority
+    player.x = serverPositionAtTime.x;
+    player.y = serverPositionAtTime.y;
+
+    console.log('inputHistory before clear:', inputHistory);
+    // remove history from before player was at this position
+    player.clearInputHistoryBeforeTime(time);
+
+    // copy by val
+    let lastProcessedInput = Object.assign({}, inputSampleAtTime);
+
+    // reapply client inputs since server time
+    // TODO: similar code is used in server a client; extract to movement module and share code
+    console.log('inputHistory after clear:', inputHistory);
+    inputHistory.forEach(inputSample => {
+      const moveDirection = movement.player.inputToDirection(lastProcessedInput.input);
+      const velocity = movement.player.directionToVelocity(moveDirection);
+      const newPosition = physics.getPosition({x: player.x, y: player.y}, velocity, inputSample.time - lastProcessedInput.time);
+      lastProcessedInput = inputSample;
+      player.x = newPosition.x;
+      player.y = newPosition.y;
+      console.log('moved player to:', player.x, ',', player.y);
+    });
+  };
 
   player.clearInputHistoryBeforeTime = function(time) {
     const inputHistoryAfterTime = function(time) {
@@ -171,8 +215,11 @@ var createPlayer = function createPlayer(game, options) {
               gamepad.justPressed(Phaser.Gamepad.XBOX360_RIGHT_TRIGGER),
     };
 
-    actions.walk(movement.player.inputToDirection(input));
+    var direction = movement.player.inputToDirection(input);
+    actions.walk(direction);
 
+    // client-side prediction:
+    velocity = movement.player.directionToVelocity(direction);
     var position = physics.getPosition({x: player.x, y: player.y}, velocity, game.time.elapsed);
     player.x = position.x;
     player.y = position.y;
@@ -187,7 +234,15 @@ var createPlayer = function createPlayer(game, options) {
     if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
       // store current player input if it has changed since the last sample
       if (!utils.objectsAreEqual(lastInputSample, input)) {
-        inputHistory.push({input, time: game.time.now});
+        // TODO: experiment with only predicting client movement with each input sample
+//        // client-side prediction:
+//        actions.walk(movement.player.inputToDirection(input));
+//        var position = physics.getPosition({x: player.x, y: player.y}, velocity, game.time.elapsed);
+//        player.x = position.x;
+//        player.y = position.y;
+
+        // TODO: consider removing position from input sample data before sending to server
+        inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
         lastInputSample = input;
       }
       lastInputSampleTime = game.time.now;
@@ -200,7 +255,6 @@ var createPlayer = function createPlayer(game, options) {
     if (game.time.now >= lastInputUploadTime + inputUploadInterval) {
       // upload player input history if it has been updated since the last upload and is not empty
       if (inputHistory.length && inputHistory[inputHistory.length - 1].time > lastInputUploadLatestSampleTime) {
-        console.log('sending inputHistory with length:', inputHistory.length);
         socket.send({type: 'move', inputHistory});
         lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
       }
