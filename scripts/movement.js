@@ -1,3 +1,14 @@
+const physics = {
+  getValue(priorValue, rateOfChange, deltaTime) {
+    return priorValue + rateOfChange * deltaTime;
+  },
+  getPosition(position, velocity, deltaTime) {
+    const x = this.getValue(position.x, velocity.x, deltaTime);
+    const y = this.getValue(position.y, velocity.y, deltaTime);
+    return {x, y};
+  }
+};
+
 const movement = {
   player: {
     inputToDirection(input) {
@@ -53,7 +64,19 @@ const movement = {
         default:
           return {x: 0, y: 0};
       }
-    }
+    },
+    getPositionFromInputHistorySinceTime(inputHistory, lastAppliedTime) {
+      return inputHistory
+        .filter(inputSample => inputSample.time >= lastAppliedTime)
+        .reduce((prev, curr) => {
+          const lastMoveDirection = movement.player.inputToDirection(prev.input);
+          const velocity = movement.player.directionToVelocity(lastMoveDirection);
+          const newPosition = physics.getPosition({x: prev.position.x, y: prev.position.y}, velocity, curr.time - prev.time);
+          return Object.assign({}, curr, { position: newPosition });
+        })
+        .position
+      ;
+    },
   }
 };
 

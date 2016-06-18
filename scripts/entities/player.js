@@ -1,3 +1,5 @@
+let gPlayer; // debugging: expose player
+
 var createPlayer = function createPlayer(game, options) {
   var defaults = {
     x: utils.randomIntBetween(0, game.width),
@@ -30,7 +32,7 @@ var createPlayer = function createPlayer(game, options) {
   // TODO: come up with a better name
   var lastInputUploadLatestSampleTime = 0; 
   var lastInputSample;
-  var inputHistory = [];
+  var inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
   var velocity = {x: 0, y: 0};
 
   function downconvertDirection(direction) {
@@ -136,56 +138,42 @@ var createPlayer = function createPlayer(game, options) {
   player.lastAttacked = 0;
 
   /**
-   * Compare what the server says the player's position should be at the most recent
-   * time we've gotten back from the server to what the position was on the client
-   * at that time. If the positions differ, recalculate the player's current position
-   * using the server-calculated position as the starting point and reconciling
-   * (reapplying any inputs in history since then).
+   * Called when server disagrees with client's position at a given time.
+   * Recalculates the player's current position using the server-calculated position as
+   * the starting point and reconciling (reapplying any inputs in history since then).
    * See: http://www.gabrielgambetta.com/fpm_live.html
    */
   // TODO: interpolate and changes smoothly over time
   // TODO: huh, the reconciliation (playing back recorded input since 'time') isn't working... for
   // some reason, clearInputHistoryBeforeTime seems to be wiping out the history since time as well
-  player.syncPositionWithServer = function(time, serverPositionAtTime) {
+  player.syncPositionWithServer = function(serverTime, serverPositionAtTime) {
     // TODO: discard any server data with time we don't have because it's old/out of order?
-    const inputSampleAtTime = inputHistory.find(inputSample => inputSample.time === time);
-    const localPositionAtTime = inputSampleAtTime.position;
-
-    if (utils.objectsAreEqual(localPositionAtTime, serverPositionAtTime)) {
-      console.log('match! returning');
-      return;
-    }
-
     // move player back to prior position by server authority
     player.x = serverPositionAtTime.x;
     player.y = serverPositionAtTime.y;
 
-    console.log('inputHistory before clear:', inputHistory);
-    // remove history from before player was at this position
-    player.clearInputHistoryBeforeTime(time);
-
-    // copy by val
-    let lastProcessedInput = Object.assign({}, inputSampleAtTime);
+    // update the captured position stored in inputHistory with the corrected value from the server
+    inputHistory = inputHistory.map(inputSample => {
+      if (inputSample.time === serverTime) {
+        inputSample.position = serverPositionAtTime;
+      }
+      return inputSample;
+    });
 
     // reapply client inputs since server time
-    // TODO: similar code is used in server a client; extract to movement module and share code
-    console.log('inputHistory after clear:', inputHistory);
-    inputHistory.forEach(inputSample => {
-      const moveDirection = movement.player.inputToDirection(lastProcessedInput.input);
-      const velocity = movement.player.directionToVelocity(moveDirection);
-      const newPosition = physics.getPosition({x: player.x, y: player.y}, velocity, inputSample.time - lastProcessedInput.time);
-      lastProcessedInput = inputSample;
-      player.x = newPosition.x;
-      player.y = newPosition.y;
-      console.log('moved player to:', player.x, ',', player.y);
-    });
+    const newPosition = movement.player.getPositionFromInputHistorySinceTime(inputHistory, serverTime);
+    // TODO: isn't there a terser es6 way to do this sort of thing?
+    console.log('reconciling position with server');
+    player.x = newPosition.x;
+    player.y = newPosition.y;
   };
 
   player.clearInputHistoryBeforeTime = function(time) {
-    const inputHistoryAfterTime = function(time) {
-      return inputHistory.filter(inputSample => inputSample.time > time);
+    console.log('clearing input history before time:', time);
+    const inputHistorySinceTime = function(time) {
+      return inputHistory.filter(inputSample => inputSample.time >= time);
     };
-    inputHistory = inputHistoryAfterTime(time);
+    inputHistory = inputHistorySinceTime(time);
   };
 
   player.update = function() {
@@ -242,6 +230,8 @@ var createPlayer = function createPlayer(game, options) {
 //        player.y = position.y;
 
         // TODO: consider removing position from input sample data before sending to server
+        // and checking on client whether server position disagrees with client historical position
+        // (instead of performing this check on the server)
         inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
         lastInputSample = input;
       }
@@ -249,19 +239,20 @@ var createPlayer = function createPlayer(game, options) {
     }
     
     // send stored input to server at fixed intervals
-    // TODO: on server response, clear out any history server has processed
     var inputUploadPerSecond = 6;
     var inputUploadInterval = 1000 / inputUploadPerSecond;
     if (game.time.now >= lastInputUploadTime + inputUploadInterval) {
       // upload player input history if it has been updated since the last upload and is not empty
       if (inputHistory.length && inputHistory[inputHistory.length - 1].time > lastInputUploadLatestSampleTime) {
         socket.send({type: 'move', inputHistory});
+        console.log('sending input history:', inputHistory);
         lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
       }
       lastInputUploadTime = game.time.now;
     }
   };
 
+  gPlayer = player; // debugging: expose player
   return player;
 };
 

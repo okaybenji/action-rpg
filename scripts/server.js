@@ -4,7 +4,6 @@ const WebSocketServer = require('ws').Server;
 const wss = new WebSocketServer({ port: 8080 });
 const utils = require('./utils');
 const movement = require('./movement.js');
-const physics = require('./physics.js');
 
 wss.broadcast = function broadcast(data) {
   const msg = JSON.stringify(data);
@@ -26,7 +25,7 @@ wss.on('connection', function connection(ws) {
   ws.id = id;
   ws.x = utils.randomIntBetween(0, 256);
   ws.y = utils.randomIntBetween(0, 240);
-  ws.lastProcessedInput = { input: {}, time: 0 };
+  ws.lastProcessedInput = { input: {}, time: 0, position: { x: ws.x, y: ws.y } };
 
   console.log(id + ' connected. spawning at ' + ws.x + ',' + ws.y + '.');
   wss.broadcast({type: 'chat', text: id + ' connected'});
@@ -56,6 +55,7 @@ wss.on('connection', function connection(ws) {
     y: ws.y
   });
 
+  // TODO: use strategy pattern here instead of storing logic in a switch
   ws.on('message', function incoming(message) {
     const msg = JSON.parse(message);
     switch (msg.type) {
@@ -81,20 +81,23 @@ wss.on('connection', function connection(ws) {
         // and yet keeps packet size reasonable, maybe just use interpolation to move player where
         // server says he should be.
         // TODO: Update the server to ignore any data received which is older than lastProcessedInput.time.
-        // TODO: rewrite this as a reduce function which just returns the new position, then set ws.x and
-        // ws.y based on that!
-        msg.inputHistory
-          .forEach(inputSample => {
-            const moveDirection = movement.player.inputToDirection(ws.lastProcessedInput.input);
-            const velocity = movement.player.directionToVelocity(moveDirection);
-            const newPosition = physics.getPosition({x: ws.x, y: ws.y}, velocity, inputSample.time - ws.lastProcessedInput.time);
-            ws.lastProcessedInput = inputSample;
-            ws.x = newPosition.x;
-            ws.y = newPosition.y;
-          });
+        const inputHistory = msg.inputHistory;
+        const lastAppliedTime = ws.lastProcessedInput.time;
+        const newPosition = movement.player.getPositionFromInputHistorySinceTime(inputHistory, lastAppliedTime);
+        ws.x = newPosition.x;
+        ws.y = newPosition.y;
+        ws.lastProcessedInput = inputHistory[inputHistory.length - 1];
 
-        ws.sendStr({ type: 'move', time: ws.lastProcessedInput.time, id: ws.id, position: {x: ws.x, y: ws.y} });
+        let response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id };
+        // if client's position at this time doesn't match our calculated position, send corrected position
+        console.log('server position:', {x: ws.x, y: ws.y});
+        console.log('client position:', {x: ws.lastProcessedInput.position.x, y: ws.lastProcessedInput.position.y});
+        if (ws.x !== ws.lastProcessedInput.position.x || ws.y !== ws.lastProcessedInput.position.y) {
+          response.position = {x: ws.x, y: ws.y};
+        }
+        ws.sendStr(response);
         console.log(id + ' last move to: ' + ws.x + ',' + ws.y);
+        console.log(id + ' last move at: ' + ws.lastProcessedInput.time);
         break;
     }
   });
