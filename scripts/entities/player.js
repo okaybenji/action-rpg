@@ -13,26 +13,30 @@ var createPlayer = function createPlayer(game, options) {
       attack: 'SHIFT'
     },
     gamepad: game.input.gamepad.pad1,
+    isClient: false
   };
 
   var settings = Object.assign({}, defaults, options);
 
-  var keys = {
-    up: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.up]),
-    down: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.down]),
-    left: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.left]),
-    right: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.right]),
-    attack: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.attack]),
-  };
+  if (settings.isClient) {
+    var keys = {
+      up: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.up]),
+      down: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.down]),
+      left: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.left]),
+      right: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.right]),
+      attack: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.attack]),
+    };
 
-  var gamepad = settings.gamepad;
-  var lastInputSampleTime = 0;
-  var lastInputUploadTime = 0;
-  // lastInputUploadLatestSampleTime is the most recent sample time in inputHistory (the time from the last element in the array)
-  // TODO: come up with a better name
-  var lastInputUploadLatestSampleTime = 0; 
-  var lastInputSample;
-  var inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
+    var gamepad = settings.gamepad;
+    var lastInputSampleTime = 0;
+    var lastInputUploadTime = 0;
+    // lastInputUploadLatestSampleTime is the most recent sample time in inputHistory (the time from the last element in the array)
+    // TODO: come up with a better name
+    var lastInputUploadLatestSampleTime = 0;
+    var lastInputSample;
+    var inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
+  }
+
   var velocity = {x: 0, y: 0};
 
   function downconvertDirection(direction) {
@@ -190,6 +194,10 @@ var createPlayer = function createPlayer(game, options) {
   };
 
   player.update = function() {
+    if (!settings.isClient) {
+      return;
+    }
+
     var input = {
       left:   (keys.left.isDown && !keys.right.isDown) ||
               (gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_LEFT) && !gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_RIGHT)) ||

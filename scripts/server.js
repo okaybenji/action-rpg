@@ -112,14 +112,13 @@ wss.on('connection', function connection(ws) {
         ws.y = newPosition.y;
         ws.lastProcessedInput = inputHistory[inputHistory.length - 1];
 
-        let response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id };
+        let response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id, position: {x: ws.x, y: ws.y} };
         // if client's position at this time doesn't match our calculated position, send corrected position
         if (ws.x !== ws.lastProcessedInput.position.x || ws.y !== ws.lastProcessedInput.position.y) {
           console.log('correcting client', ws.id, 'position from:', {
             x: ws.lastProcessedInput.position.x,
             y: ws.lastProcessedInput.position.y
           }, 'to:', {x: ws.x, y: ws.y});
-          response.position = {x: ws.x, y: ws.y};
         }
         // debugging: simulate lag by wrapping this in a timeout
 //        setTimeout(function() {
