@@ -50,8 +50,6 @@ wss.on('connection', function connection(ws) {
   ws.y = utils.randomIntBetween(0, 240);
   ws.lastProcessedInput = { input: {}, time: 0, position: { x: ws.x, y: ws.y } };
 
-  wss.broadcast({type: 'chat', text: id + ' connected'});
-
   // we always want to stringify our data
   // TODO: is there an elegant way to override ws.send to always stringify?
   ws.sendStr = function(msg) {
@@ -62,8 +60,8 @@ wss.on('connection', function connection(ws) {
     ws.send(JSON.stringify(msg));
   };
 
-  // inform client of its id
-  ws.sendStr({ type: 'id', id });
+  wss.broadcast({type: 'chat', text: id + ' connected'});
+  ws.sendStr({ type: 'id', id }); // inform client of its id
 
   // spawn all existing players on client
   wss.clients.forEach(function(client) {
@@ -74,30 +72,24 @@ wss.on('connection', function connection(ws) {
   });
 
   // broadcast our own position (and spawn)
-  wss.broadcast({
-    type: 'spawn',
-    id,
-    x: ws.x,
-    y: ws.y
-  });
+  wss.broadcast({ type: 'spawn', id, x: ws.x, y: ws.y });
 
   ws.on('close', function() {
     wss.broadcast({type: 'chat', text: id + ' disconnected'});
     wss.broadcast({type: 'destroy', id: id});
   });
 
-  // TODO: use strategy pattern here instead of storing logic in a switch
   ws.on('message', function incoming(message) {
     const msg = JSON.parse(message);
-    switch (msg.type) {
-      case 'chat':
+    const messageHandlers = {
+      chat() {
         console.log(id + ': ' + msg.text);
         wss.broadcast({
           type: 'chat',
           text: id + ': ' + msg.text
         });
-        break;
-      case 'move':
+      },
+      move() {
         /**
          * Process all input history received from client to calculate player's current position.
          * Send back the new position. Also send the time of the most recently processed input
@@ -111,20 +103,15 @@ wss.on('connection', function connection(ws) {
         ws.x = newPosition.x;
         ws.y = newPosition.y;
         ws.lastProcessedInput = inputHistory[inputHistory.length - 1];
+        const response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id, position: {x: ws.x, y: ws.y} };
+        const simulatedLag = 0; // for debugging
 
-        let response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id, position: {x: ws.x, y: ws.y} };
-        // if client's position at this time doesn't match our calculated position, send corrected position
-        if (ws.x !== ws.lastProcessedInput.position.x || ws.y !== ws.lastProcessedInput.position.y) {
-          console.log('correcting client', ws.id, 'position from:', {
-            x: ws.lastProcessedInput.position.x,
-            y: ws.lastProcessedInput.position.y
-          }, 'to:', {x: ws.x, y: ws.y});
-        }
-        // debugging: simulate lag by wrapping this in a timeout
-//        setTimeout(function() {
+        setTimeout(function() {
           wss.broadcast(response);
-//        }, 250);
-        break;
-    }
+        }, simulatedLag);
+      }
+    };
+
+    messageHandlers[msg.type]();
   });
 });

@@ -163,7 +163,10 @@ var createPlayer = function createPlayer(game, options) {
   // and because of this, the hiccups caused by failed recon are happening much more rarely.
   // (although thinking about it more now, i don't know if that makes any sense... even with perfect
   // prediction, recon should cause rubber banding. see above example. &shrug;)
-  // still need to figure out why it's not working as intended and correct it.
+  // UPDATE 2: no, i think it does make sense. in the example, the client is updating to the server's
+  // position every time it receives a position from the server. in our code, we're only updating
+  // the position if our prior position does not match the position from the server.
+  // still need to figure out why, in the rare cases it's needed, it's not working as intended.
   player.syncPositionWithServer = function(serverTime, serverPositionAtTime) {
     // TODO: discard any server data with time we don't have because it's old/out of order?
     // move player back to prior position by server authority
@@ -239,18 +242,18 @@ var createPlayer = function createPlayer(game, options) {
     }
 
     // store player input at fixed intervals
-    var inputSamplesPerSecond = 25;
+    var inputSamplesPerSecond = 6;
     var inputSampleInterval = 1000 / inputSamplesPerSecond;
     if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
       // TODO: only store current player input if it has changed since the last sample, e.g.:
-      if (!utils.objectsAreEqual(lastInputSample, input)) {
+//      if (!utils.objectsAreEqual(lastInputSample, input)) {
       // NOTE that this will mean making confusing updates to position reconciliation
         // TODO: consider removing position from input sample data before sending to server
         // and checking on client whether server position disagrees with client historical position
         // (instead of performing this check on the server)
         inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
         lastInputSample = input;
-      }
+//      }
       lastInputSampleTime = game.time.now;
     }
     
