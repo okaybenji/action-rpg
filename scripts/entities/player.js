@@ -136,6 +136,14 @@ var createPlayer = function createPlayer(game, options) {
 
   player.lastAttacked = 0;
 
+  player.positionAtTimeMatchesServer = function(serverTime, serverPositionAtTime) {
+    const clientPositionAtTime = inputHistory
+      .find(inputSample => inputSample.time === serverTime)
+      .position
+    ;
+    return clientPositionAtTime === serverPositionAtTime;
+  };
+
   /**
    * Called when server disagrees with client's position at a given time.
    * Recalculates the player's current position using the server-calculated position as

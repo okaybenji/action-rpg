@@ -123,7 +123,7 @@ wss.on('connection', function connection(ws) {
         }
         // debugging: simulate lag by wrapping this in a timeout
 //        setTimeout(function() {
-          ws.sendStr(response);
+          wss.broadcast(response);
 //        }, 250);
         break;
     }

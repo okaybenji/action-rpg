@@ -2,6 +2,7 @@ const createSocket = function() {
   const ws = new WebSocket('ws://localhost:8080');
   let id;
   let players = {};
+  let player; // ourself/client avatar
 
   ws.onmessage = function(data, flags) {
     const msg = JSON.parse(data.data);
@@ -10,6 +11,7 @@ const createSocket = function() {
     switch (msg.type) {
       case 'id':
         id = msg.id;
+        player = players[msg.id];
         break;
       case 'chat':
         chat.log(msg.text);
@@ -20,7 +22,6 @@ const createSocket = function() {
           console.warn('tried to recreate player with id:', msg.id);
           break;
         }
-
         players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y});
         break;
       case 'destroy':
@@ -30,12 +31,20 @@ const createSocket = function() {
         console.log(msg.id, 'disconnected.');
         break;
       case 'move':
-        // if the server sent us a corrected position, reconcile it
-        if (msg.position) {
-          // debugging: disable reconciliation
-          players[msg.id].syncPositionWithServer(msg.time, msg.position);
+        if (msg.id === id) { // us
+          // if the client's position at last received time from server does not match server's
+          // reported position, reconcile the player position
+          if (!player.positionAtTimeMatchesServer(msg.time, msg.position)) {
+            players[msg.id].syncPositionWithServer(msg.time, msg.position);
+          }
+          players[msg.id].clearInputHistoryBeforeTime(msg.time);
+        } else { // someone else
+          // update position
+          // TODO: interpolate over time
+          // TODO: implement lag compensation
+          players[msg.id].x = msg.position.x;
+          players[msg.id].y = msg.position.y;
         }
-        players[msg.id].clearInputHistoryBeforeTime(msg.time);
         break;
     }
   };
