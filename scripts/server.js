@@ -96,9 +96,11 @@ wss.on('connection', function connection(ws) {
          * so that the client can purge any input history which is no longer needed (and stop
          * sending that old history to the server).
          */
-        // TODO: Update the server to ignore any data received which is older than lastProcessedInput.time.
-        const inputHistory = msg.inputHistory;
         const lastAppliedTime = ws.lastProcessedInput.time;
+        const inputHistory = msg.inputHistory.filter(inputSample => inputSample.time > lastAppliedTime);
+        if (!inputHistory.length) {
+          return; // ignore any old data received out of order
+        }
         const newPosition = movement.player.getPositionFromInputHistorySinceTime(inputHistory, lastAppliedTime);
         ws.x = newPosition.x;
         ws.y = newPosition.y;
