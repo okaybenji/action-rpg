@@ -5,7 +5,7 @@ const createSocket = function() {
 
   ws.onmessage = function(data, flags) {
     const msg = JSON.parse(data.data);
-//    console.log('received message:', msg);
+    console.log('received message:', msg);
 
     switch (msg.type) {
       case 'id':
@@ -27,6 +27,7 @@ const createSocket = function() {
         if (players[msg.id]) {
           players[msg.id].destroy();
         }
+        console.log(msg.id, 'disconnected.');
         break;
       case 'move':
         // if the server sent us a corrected position, reconcile it

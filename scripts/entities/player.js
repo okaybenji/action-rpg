@@ -103,7 +103,6 @@ var createPlayer = function createPlayer(game, options) {
           }
           player.animations.play('walk', 6, true);
         }
-        // console.log('pos:' + player.x + ',' + player.y);
       } else {
         player.animations.stop();
       }
@@ -146,14 +145,18 @@ var createPlayer = function createPlayer(game, options) {
   // TODO: interpolate and changes smoothly over time
   // TODO: huh, the reconciliation (playing back recorded input since 'time') isn't working... for
   // some reason, local inputHistory only ever has history up to (not beyond) server time :/ ??
+  // UPDATE: i think reconciliation is still not working, but another change i made means that
+  // the client-side prediction is much more accurate (rounding physics to nearest pixel, i think),
+  // and because of this, the hiccups caused by failed recon are happening much more rarely.
+  // (although thinking about it more now, i don't know if that makes any sense... even with perfect
+  // prediction, recon should cause rubber banding. see above example. &shrug;)
+  // still need to figure out why it's not working as intended and correct it.
   player.syncPositionWithServer = function(serverTime, serverPositionAtTime) {
     // TODO: discard any server data with time we don't have because it's old/out of order?
     // move player back to prior position by server authority
     player.x = serverPositionAtTime.x;
     player.y = serverPositionAtTime.y;
 
-    console.log('server time:', serverTime);
-    console.log('most recent sampled input time:', inputHistory[inputHistory.length - 1]);
     // update the captured position stored in inputHistory with the corrected value from the server
     inputHistory = inputHistory.map(inputSample => {
       if (inputSample.time === serverTime) {
@@ -164,14 +167,14 @@ var createPlayer = function createPlayer(game, options) {
 
     // reapply client inputs since server time
     const newPosition = movement.player.getPositionFromInputHistorySinceTime(inputHistory, serverTime);
-    // TODO: isn't there a terser es6 way to do this sort of thing?
     console.log('reconciling position with server');
+    // TODO: isn't there a terser es6 way to do this sort of thing?
+    // TODO: interpolate to new position over time!
     player.x = newPosition.x;
     player.y = newPosition.y;
   };
 
   player.clearInputHistoryBeforeTime = function(time) {
-    console.log('clearing input history before time:', time);
     const inputHistorySinceTime = function(time) {
       return inputHistory.filter(inputSample => inputSample.time > time);
     };
@@ -241,7 +244,6 @@ var createPlayer = function createPlayer(game, options) {
       // upload player input history if it has been updated since the last upload and is not empty
       if (inputHistory.length && inputHistory[inputHistory.length - 1].time > lastInputUploadLatestSampleTime) {
         socket.send({type: 'move', inputHistory});
-        console.log('sending input history:', inputHistory);
         lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
       }
       lastInputUploadTime = game.time.now;
