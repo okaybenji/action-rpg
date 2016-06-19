@@ -1,5 +1,3 @@
-let gPlayer; // debugging: expose player
-
 var createPlayer = function createPlayer(game, options) {
   var defaults = {
     x: utils.randomIntBetween(0, game.width),
@@ -74,7 +72,7 @@ var createPlayer = function createPlayer(game, options) {
   }
 
   var actions = {
-    attack: function attack() {
+    attack() {
       player.isAttacking = true;
       const duration = 200;
       const interval = 600;
@@ -97,7 +95,7 @@ var createPlayer = function createPlayer(game, options) {
       }, duration);
     },
 
-    walk: function walk(direction) {
+    walk(direction) {
       if (direction) {
         player.orientation = downconvertDirection(direction);
         if (!player.isAttacking) {
@@ -112,7 +110,7 @@ var createPlayer = function createPlayer(game, options) {
       }
     },
 
-    takeDamage: function takeDamage(amount) {
+    takeDamage(amount) {
       player.hp -= amount;
 
       if (player.hp <= 0) {
@@ -121,7 +119,7 @@ var createPlayer = function createPlayer(game, options) {
       }
     },
 
-    die: function() {
+    die() {
       // game.sfx.play('die');
       // actions.endAttack();
     },
@@ -141,11 +139,15 @@ var createPlayer = function createPlayer(game, options) {
   player.lastAttacked = 0;
 
   player.positionAtTimeMatchesServer = function(serverTime, serverPositionAtTime) {
-    const clientPositionAtTime = inputHistory
-      .find(inputSample => inputSample.time === serverTime)
-      .position
-    ;
+    const inputAtTime = inputHistory.find(inputSample => inputSample.time === serverTime);
 
+    // if inputHistory doesn't have this time, assume we already consumed the server data,
+    // and this just arrived out of order
+    if (!inputAtTime) {
+      return true;
+    }
+
+    const clientPositionAtTime = inputAtTime.position;
     return utils.objectsAreEqual(clientPositionAtTime, serverPositionAtTime);
   };
 
@@ -184,8 +186,8 @@ var createPlayer = function createPlayer(game, options) {
     // reapply client inputs since server time
     const newPosition = movement.player.getPositionFromInputHistorySinceTime(inputHistory, serverTime);
     console.log('reconciling position with server');
-    // TODO: isn't there a terser es6 way to do this sort of thing?
     // TODO: interpolate to new position over time!
+    // TODO: isn't there a terser es6 way to do this sort of thing?
     player.x = newPosition.x;
     player.y = newPosition.y;
   };
@@ -245,32 +247,16 @@ var createPlayer = function createPlayer(game, options) {
     var inputSamplesPerSecond = 6;
     var inputSampleInterval = 1000 / inputSamplesPerSecond;
     if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
-      // TODO: only store current player input if it has changed since the last sample, e.g.:
-//      if (!utils.objectsAreEqual(lastInputSample, input)) {
-      // NOTE that this will mean making confusing updates to position reconciliation
-        // TODO: consider removing position from input sample data before sending to server
-        // and checking on client whether server position disagrees with client historical position
-        // (instead of performing this check on the server)
-        inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
-        lastInputSample = input;
-//      }
+      // TODO: consider removing position from input sample data before sending to server
+      inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
+      lastInputSample = input;
       lastInputSampleTime = game.time.now;
-    }
-    
-    // send stored input to server at fixed intervals
-    var inputUploadPerSecond = 6;
-    var inputUploadInterval = 1000 / inputUploadPerSecond;
-    if (game.time.now >= lastInputUploadTime + inputUploadInterval) {
-      // upload player input history if it has been updated since the last upload and is not empty
-      if (inputHistory.length && inputHistory[inputHistory.length - 1].time > lastInputUploadLatestSampleTime) {
-        socket.send({type: 'move', inputHistory});
-        lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
-      }
-      lastInputUploadTime = game.time.now;
+      // send stored input to server
+      socket.send({type: 'move', inputHistory});
+      lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
     }
   };
 
-  gPlayer = player; // debugging: expose player
   return player;
 };
 

@@ -106,7 +106,7 @@ wss.on('connection', function connection(ws) {
         ws.y = newPosition.y;
         ws.lastProcessedInput = inputHistory[inputHistory.length - 1];
         const response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id, position: {x: ws.x, y: ws.y} };
-        const simulatedLag = 0; // for debugging
+        const simulatedLag = utils.randomIntBetween(5, 200); // for local debugging (set to 0 before deploying!)
 
         setTimeout(function() {
           wss.broadcast(response);

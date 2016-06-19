@@ -1,4 +1,4 @@
-var utils = {
+const utils = {
   // from underscore
   debounce: function debounce(func, wait, immediate) {
 	var timeout;
