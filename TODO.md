@@ -1,6 +1,6 @@
 ## TODO
-* Compensate for length of sword when player attacks west or north.
-* Eliminate bug which occasionally causes player animation to stick.
+* Compensate for length of sword when player attacks west or north
+* Eliminate bug which occasionally causes player animation to stick
 * Eliminate occasional hiccup in position reconciliation
 * Interpolate player to server recon position
 * Broadcast and interpolate positions of other players

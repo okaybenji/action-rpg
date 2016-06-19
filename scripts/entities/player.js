@@ -40,35 +40,35 @@ var createPlayer = function createPlayer(game, options) {
   var velocity = {x: 0, y: 0};
 
   function downconvertDirection(direction) {
-    var newDirection;
+    let newDirection;
 
-      switch (direction) {
-        case 'n':
-        case 'ne':
-        case 'nw':
-          newDirection = 'n';
-      }
+    switch (direction) {
+      case 'n':
+      case 'ne':
+      case 'nw':
+        newDirection = 'n';
+    }
 
-      switch (direction) {
-        case 's':
-        case 'se':
-        case 'sw':
-          newDirection = 's';
-      }
+    switch (direction) {
+      case 's':
+      case 'se':
+      case 'sw':
+        newDirection = 's';
+    }
 
-      switch (direction) {
-        case 'w':
-        case 'nw':
-        case 'sw':
-          newDirection = 'w';
-      }
+    switch (direction) {
+      case 'w':
+      case 'nw':
+      case 'sw':
+        newDirection = 'w';
+    }
 
-      switch (direction) {
-        case 'e':
-        case 'ne':
-        case 'se':
-          newDirection = 'e';
-      }
+    switch (direction) {
+      case 'e':
+      case 'ne':
+      case 'se':
+        newDirection = 'e';
+    }
 
     return newDirection;
   }
@@ -76,10 +76,10 @@ var createPlayer = function createPlayer(game, options) {
   var actions = {
     attack: function attack() {
       player.isAttacking = true;
-      var duration = 200;
-      var interval = 600;
+      const duration = 200;
+      const interval = 600;
 
-      var canAttack = (Date.now() > player.lastAttacked + interval);
+      const canAttack = (Date.now() > player.lastAttacked + interval);
       if (!canAttack) {
         return;
       }
@@ -145,7 +145,8 @@ var createPlayer = function createPlayer(game, options) {
       .find(inputSample => inputSample.time === serverTime)
       .position
     ;
-    return clientPositionAtTime === serverPositionAtTime;
+
+    return utils.objectsAreEqual(clientPositionAtTime, serverPositionAtTime);
   };
 
   /**

@@ -6,27 +6,21 @@ const createSocket = function() {
 
   ws.onmessage = function(data, flags) {
     const msg = JSON.parse(data.data);
-    console.log('received message:', msg);
+//    console.log('received message:', msg);
 
     switch (msg.type) {
       case 'id':
         id = msg.id;
-        player = players[msg.id];
         break;
       case 'chat':
         chat.log(msg.text);
         break;
       case 'spawn':
-        // don't spawn a player more than once! // TODO: is this protection necessary?
-        if (players[msg.id]) {
-          console.warn('tried to recreate player with id:', msg.id);
-          break;
-        }
-        let options = {x: msg.x, y: msg.y};
         if (msg.id === id) {
-          options.isClient = true;
+          player = players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y, isClient: true});
+        } else {
+          players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y});
         }
-        players[msg.id] = createPlayer(game, options);
         break;
       case 'destroy':
         if (players[msg.id]) {
