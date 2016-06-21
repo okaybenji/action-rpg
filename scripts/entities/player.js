@@ -209,7 +209,7 @@ var createPlayer = function createPlayer(game, options) {
       return;
     }
 
-    var input = {
+    const input = {
       left:   (keys.left.isDown && !keys.right.isDown) ||
               (gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_LEFT) && !gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_RIGHT)) ||
               gamepad.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_X) < -0.1 ||
@@ -249,10 +249,12 @@ var createPlayer = function createPlayer(game, options) {
     }
 
     // store player input at fixed intervals
-    const inputSamplesPerSecond = 30;
+    const inputSamplesPerSecond = 6;
     const inputSampleInterval = 1000 / inputSamplesPerSecond;
-    const inputSamplesPerUpload = 5; // how many samples to collect before sending to server
-    if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
+    const inputSamplesPerUpload = 1; // how many samples to collect before sending to server
+    const isTimeToUpdate = game.time.now >= lastInputSampleTime + inputSampleInterval;
+    const inputsHaveChanged = !utils.objectsAreEqual(input, inputHistory.last().input);
+    if (isTimeToUpdate || inputsHaveChanged) {
       // TODO: consider removing position from input sample data before sending to server
       inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
       lastInputSample = input;
