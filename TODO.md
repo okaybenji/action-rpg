@@ -1,6 +1,7 @@
 ## TODO
 
 ### Bug fixes
+* there seems to be an issue in which newly connecting players cannot see other players until they have switched tabs away from the loaded page, then switch back. recall that last time something like this happened, it was because you were failing to wait for the game to load before spawning players. that was causing a phaser error about assets not yet being in cache, though. this issue is not causing an error. also, it works locally just fine.
 * refactored logging code causes 'user-such-and-such connected' to be logged for every user each time a new user connects.
 * Compensate for length of sword when player attacks west or north
 * Eliminate bug which occasionally causes player animation to stick
