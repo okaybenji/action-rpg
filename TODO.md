@@ -1,20 +1,20 @@
 ## TODO
 
 ### Bug fixes
-* there seems to be an issue in which newly connecting players cannot see other players until they have switched tabs away from the loaded page, then switch back. recall that last time something like this happened, it was because you were failing to wait for the game to load before spawning players. that was causing a phaser error about assets not yet being in cache, though. this issue is not causing an error. also, it works locally just fine.
-* refactored logging code causes 'user-such-and-such connected' to be logged for every user each time a new user connects.
+* There seems to be an issue in which newly connecting players cannot see other players until they have switched tabs away from the loaded page, then switch back. Recall that last time something like this happened, it was because you were failing to wait for the game to load before spawning players. That was causing a phaser error about assets not yet being in cache, though. This issue is not causing an error. (Note: Previously thought this worked fine locally. It does not. I had separate windows instead of tabs going so I didn't see the issue.)
+* Refactored logging code causes 'user-such-and-such connected' to be logged for every user each time a new user connects.
 * Compensate for length of sword when player attacks west or north
 * Eliminate bug which occasionally causes player animation to stick
-* Eliminate occasional hiccup in position reconciliation (basically, make reconciliation work :/)
+* Improve position reconciliation
 
 ### Near-future features
 * Interpolate player to server recon position
-* Broadcast and interpolate positions of other players
+* Interpolate positions of other players
 * Consider allowing 360 degrees player rotation
 * Allow players to attack each other
 * Implement lag compensation. Rather than broadcasting player positions, broadcast input histories of players to each other and play them back at a constant 100ms in the past, interpolating between each input. On the server, store histories for each player until server knows what each player was doing at a given time (or an arbitrary fixed value of time has passed when the data is too old to matter anyway). If player A attacks player B, look to see where player B was positioned on player A's machine at the time of attack. If server happens to have input for player B at that moment, use the position calculated from that input. Otherwise, calculate the position from the time and the inputs stored from immediately before and after that time.
 * Prompt player for username on connection and accept if not already taken
-* Currently input sample and input history upload occur at the same rate of 6 times/sec. This is not likely to be a high enough rate for sampling in an action game where, for instance, a player may attack at any instant and for any duration. For one thing, some such attacks will happen between samples and thus never get logged or uploaded. Perhaps a better approach is to track the last time input was uploaded and check each sample how many samples we have recorded since that time. Once a threshold is hit, upload the history to the server. So the sample rate can be changed to something like 24 times per second, and the treshold of samples before uploading 4 (24 / 4 = 6 uploads per second).
+* Currently input sample and input history upload occur at the same rate of 6 times/sec. This is not likely to be a high enough rate for sampling in an action game where, for instance, a player may attack at any instant and for any duration. For one thing, some such attacks will happen between samples and thus never get logged or uploaded. Perhaps a better approach is to track the last time input was uploaded and check each sample how many samples we have recorded since that time. Once a threshold is hit, upload the history to the server. So the sample rate can be changed to something like 24 times per second, and the treshold of samples before uploading 4 (24 / 4 = 6 uploads per second). UPDATE: Doing this now, with 30 samples a second, and still some inputs are getting lost (some quick movements, some attacks).
 
 ### Eventual features
 * Let client configure its samples per second and upload rate. Track this info on the server and accumulate responses, only sending them to client each upload (will no longer be able to use broadcast for movement).
