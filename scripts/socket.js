@@ -27,10 +27,8 @@ const createSocket = function() {
           // if the client's position at last received time from server does not match server's
           // reported position, reconcile the player position
           if (player && !player.positionAtTimeMatchesServer(msg.time, msg.position)) {
-            players[msg.id].syncPositionWithServer(msg.time, msg.position);
+            players[msg.id].queuePositionSyncWithServer(msg.time, msg.position);
           }
-          // purge consumed history
-          players[msg.id].clearInputHistoryBeforeTime(msg.time);
         } else { // it's someone else
           // update position
           // TODO: interpolate over time

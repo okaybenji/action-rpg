@@ -33,6 +33,7 @@ var createPlayer = function createPlayer(game, options) {
     var latestUploadedInputSampleTime = 0;
     var lastInputSample;
     var inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
+    var serverReconciliationHistory = [];
   }
 
   var velocity = {x: 0, y: 0};
@@ -153,40 +154,47 @@ var createPlayer = function createPlayer(game, options) {
 
   /**
    * Called when server disagrees with client's position at a given time.
+   * Adds corrected position and time data to a queue to be merged with client input history
+   * for reconciliation.
    * Recalculates the player's current position using the server-calculated position as
    * the starting point and reconciling (reapplying any inputs in history since then).
    * See: http://www.gabrielgambetta.com/fpm_live.html
    */
   // TODO: interpolate and changes smoothly over time
-  // TODO: huh, the reconciliation (playing back recorded input since 'time') isn't working... for
-  // some reason, local inputHistory only ever has history up to (not beyond) server time :/ ??
-  // UPDATE: i think reconciliation is still not working, but another change i made means that
-  // the client-side prediction is much more accurate (rounding physics to nearest pixel, i think),
-  // and because of this, the hiccups caused by failed recon are happening much more rarely.
-  // (although thinking about it more now, i don't know if that makes any sense... even with perfect
-  // prediction, recon should cause rubber banding. see above example. &shrug;)
-  // UPDATE 2: no, i think it does make sense. in the example, the client is updating to the server's
-  // position every time it receives a position from the server. in our code, we're only updating
-  // the position if our prior position does not match the position from the server.
-  // still need to figure out why, in the rare cases it's needed, it's not working as intended.
-  player.syncPositionWithServer = function(serverTime, serverPositionAtTime) {
+  player.queuePositionSyncWithServer = function(serverTime, serverPositionAtTime) {
     // TODO: discard any server data with time we don't have because it's old/out of order?
-    // update the captured position stored in inputHistory with the corrected value from the server
+    serverReconciliationHistory.push({time: serverTime, position: serverPositionAtTime});
+  };
+
+  player.syncPositionWithServer = function() {
+    if (!serverReconciliationHistory.length) {
+      return;
+    }
+    // merge input history with positions from server
     inputHistory = inputHistory.map(inputSample => {
-      if (inputSample.time === serverTime) {
-        inputSample.position = serverPositionAtTime;
+      // look to see if this sample has a corresponding time in the data received from the server
+      const courseCorrection = serverReconciliationHistory.find(reconData => reconData.time === inputSample.time);
+      if (courseCorrection) {
+        return Object.assign({}, inputSample, courseCorrection);
+      } else {
+        return inputSample;
       }
-      return inputSample;
     });
 
     // start with prior position by server authority,
     // then reapply client inputs since server time to determine player's current reconciled position
-    const inputHistorySinceServerTime = movement.player.getInputHistorySinceTime(inputHistory, serverTime);
-    const newPosition = movement.player.getPositionFromInputHistory(inputHistorySinceServerTime);
+//    const inputHistorySinceServerTime = movement.player.getInputHistorySinceTime(inputHistory, serverTime);
+
+    const newPosition = movement.player.getPositionFromInputHistory(inputHistory);
     // TODO: interpolate to new position over time!
     // TODO: isn't there a terser es6 way to do this sort of thing?
     player.x = newPosition.x;
     player.y = newPosition.y;
+
+    // purge consumed history
+    const lastReconciledTime = serverReconciliationHistory.last().time;
+//    player.clearInputHistoryBeforeTime(lastReconciledTime);
+    serverReconciliationHistory = [];
   };
 
   player.clearInputHistoryBeforeTime = function(time) {
@@ -241,20 +249,22 @@ var createPlayer = function createPlayer(game, options) {
     }
 
     // store player input at fixed intervals
-    const inputSamplesPerSecond = 60;
+    const inputSamplesPerSecond = 30;
     const inputSampleInterval = 1000 / inputSamplesPerSecond;
-    const inputSamplesPerUpload = 10; // how many samples to collect before sending to server
+    const inputSamplesPerUpload = 5; // how many samples to collect before sending to server
     if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
       // TODO: consider removing position from input sample data before sending to server
       inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
       lastInputSample = input;
       lastInputSampleTime = game.time.now;
 
+      // apply any course corrections from the server
+      player.syncPositionWithServer();
       const shouldUploadSamples = movement.player.getInputHistorySinceTime(inputHistory, latestUploadedInputSampleTime).length >= inputSamplesPerUpload;
       if (shouldUploadSamples) {
         // send stored input to server
         socket.send({type: 'move', inputHistory});
-        latestUploadedInputSampleTime = inputHistory[inputHistory.length - 1].time;
+        latestUploadedInputSampleTime = inputHistory.last().time;
       }
     }
   };

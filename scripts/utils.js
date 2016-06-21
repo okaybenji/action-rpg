@@ -1,3 +1,11 @@
+// i typically avoid doing this sort of thing...
+// but Array.prototype.last really needs to be a thing
+if (!Array.prototype.last){
+    Array.prototype.last = function(){
+        return this[this.length - 1];
+    };
+};
+
 const utils = {
   // from underscore
   debounce: function debounce(func, wait, immediate) {

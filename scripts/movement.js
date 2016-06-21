@@ -3,8 +3,8 @@ const physics = {
     return priorValue + rateOfChange * deltaTime;
   },
   getPosition(priorPosition, velocity, deltaTime) {
-    const x = Math.round(this.getValue(priorPosition.x, velocity.x, deltaTime));
-    const y = Math.round(this.getValue(priorPosition.y, velocity.y, deltaTime));
+    const x = this.getValue(priorPosition.x, velocity.x, deltaTime);
+    const y = this.getValue(priorPosition.y, velocity.y, deltaTime);
     return {x, y};
   }
 };
