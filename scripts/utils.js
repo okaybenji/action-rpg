@@ -1,4 +1,12 @@
-var utils = {
+// i typically avoid doing this sort of thing...
+// but Array.prototype.last really needs to be a thing
+if (!Array.prototype.last){
+    Array.prototype.last = function(){
+        return this[this.length - 1];
+    };
+};
+
+const utils = {
   // from underscore
   debounce: function debounce(func, wait, immediate) {
 	var timeout;
@@ -14,6 +22,16 @@ var utils = {
 		if (callNow) func.apply(context, args);
 	};
   },
+
+  randomIntBetween(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  },
+
+  objectsAreEqual(objA, objB) {
+    return JSON.stringify(objA) === JSON.stringify(objB);
+  }
 };
 
-//module.exports = utils;
+if (typeof module !== 'undefined') {
+  module.exports = utils;
+}

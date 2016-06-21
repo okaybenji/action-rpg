@@ -1,5 +1,7 @@
 var createPlayer = function createPlayer(game, options) {
   var defaults = {
+    x: utils.randomIntBetween(0, game.width),
+    y: utils.randomIntBetween(0, game.height),
     orientation: 'down', // may use this for shield logic
     keys: {
       up: 'UP',
@@ -8,63 +10,75 @@ var createPlayer = function createPlayer(game, options) {
       right: 'RIGHT',
       attack: 'SHIFT'
     },
-//    color: 'pink',
     gamepad: game.input.gamepad.pad1,
+    isClient: false
   };
 
   var settings = Object.assign({}, defaults, options);
 
-  var keys = {
-    up: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.up]),
-    down: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.down]),
-    left: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.left]),
-    right: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.right]),
-    attack: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.attack]),
-  };
+  if (settings.isClient) {
+    var keys = {
+      up: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.up]),
+      down: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.down]),
+      left: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.left]),
+      right: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.right]),
+      attack: game.input.keyboard.addKey(Phaser.Keyboard[settings.keys.attack]),
+    };
 
-  var gamepad = settings.gamepad;
+    var gamepad = settings.gamepad;
+    var lastInputSampleTime = 0;
+    var lastInputUploadTime = 0;
+    // latestUploadedInputSampleTime is the most recent sample time in inputHistory (the time from the last element in the array)
+    // TODO: come up with a better name
+    var latestUploadedInputSampleTime = 0;
+    var lastInputSample;
+    var inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
+    var serverReconciliationHistory = [];
+  }
+
+  var velocity = {x: 0, y: 0};
 
   function downconvertDirection(direction) {
-    var newDirection;
+    let newDirection;
 
-      switch (direction) {
-        case 'n':
-        case 'ne':
-        case 'nw':
-          newDirection = 'n';
-      }
+    switch (direction) {
+      case 'n':
+      case 'ne':
+      case 'nw':
+        newDirection = 'n';
+    }
 
-      switch (direction) {
-        case 's':
-        case 'se':
-        case 'sw':
-          newDirection = 's';
-      }
+    switch (direction) {
+      case 's':
+      case 'se':
+      case 'sw':
+        newDirection = 's';
+    }
 
-      switch (direction) {
-        case 'w':
-        case 'nw':
-        case 'sw':
-          newDirection = 'w';
-      }
+    switch (direction) {
+      case 'w':
+      case 'nw':
+      case 'sw':
+        newDirection = 'w';
+    }
 
-      switch (direction) {
-        case 'e':
-        case 'ne':
-        case 'se':
-          newDirection = 'e';
-      }
+    switch (direction) {
+      case 'e':
+      case 'ne':
+      case 'se':
+        newDirection = 'e';
+    }
 
     return newDirection;
   }
 
   var actions = {
-    attack: function attack() {
+    attack() {
       player.isAttacking = true;
-      var duration = 200;
-      var interval = 600;
+      const duration = 200;
+      const interval = 600;
 
-      var canAttack = (Date.now() > player.lastAttacked + interval);
+      const canAttack = (Date.now() > player.lastAttacked + interval);
       if (!canAttack) {
         return;
       }
@@ -82,53 +96,22 @@ var createPlayer = function createPlayer(game, options) {
       }, duration);
     },
 
-    run: function run(direction) {
-      var maxSpeed = 32;
-      var acceleration = 8;
-      var animDirection;
-      player.orientation = downconvertDirection(direction);
-
-      switch (direction) {
-        case 'n':
-        case 'ne':
-        case 'nw':
-          player.body.velocity.y = Math.max(player.body.velocity.y - acceleration, -maxSpeed);
-      }
-
-      switch (direction) {
-        case 's':
-        case 'se':
-        case 'sw':
-          player.body.velocity.y = Math.min(player.body.velocity.y + acceleration, maxSpeed);
-          animDirection = 's';
-      }
-
-      switch (direction) {
-        case 'w':
-        case 'nw':
-        case 'sw':
-          player.body.velocity.x = Math.max(player.body.velocity.x - acceleration, -maxSpeed);
-          animDirection = 'w';
-      }
-
-      switch (direction) {
-        case 'e':
-        case 'ne':
-        case 'se':
-          player.body.velocity.x = Math.min(player.body.velocity.x + acceleration, maxSpeed);
-          animDirection = 'e';
-      }
-
-      if (!player.isAttacking) {
-        var texture = 'player-walk-' + player.orientation;
-        if (player.key !== texture) {
-          player.loadTexture('player-walk-' + player.orientation);
+    walk(direction) {
+      if (direction) {
+        player.orientation = downconvertDirection(direction);
+        if (!player.isAttacking) {
+          var texture = 'player-walk-' + player.orientation;
+          if (player.key !== texture) {
+            player.loadTexture('player-walk-' + player.orientation);
+          }
+          player.animations.play('walk', 6, true);
         }
-        player.animations.play('walk', 6, true);
+      } else {
+        player.animations.stop();
       }
     },
 
-    takeDamage: function takeDamage(amount) {
+    takeDamage(amount) {
       player.hp -= amount;
 
       if (player.hp <= 0) {
@@ -137,29 +120,94 @@ var createPlayer = function createPlayer(game, options) {
       }
     },
 
-    die: function() {
-//      game.sfx.play('die');
-//        actions.endAttack();
+    die() {
+      // game.sfx.play('die');
+      // actions.endAttack();
     },
   };
 
-//  var player = game.add.sprite(0, 0, settings.color);
   var player = game.add.sprite(0, 0, 'player-walk-s');
   player.animations.add('walk');
   player.name = settings.name;
   player.orientation = settings.orientation;
+  player.x = settings.x;
+  player.y = settings.y;
 
   // track health
   player.hp = player.maxHp = 6;
   player.actions = actions;
 
-  game.physics.arcade.enable(player);
-  player.body.collideWorldBounds = true;
-  player.body.gravity.y = 0;
-
   player.lastAttacked = 0;
 
+  player.positionAtTimeMatchesServer = function(serverTime, serverPositionAtTime) {
+    const inputAtTime = inputHistory.find(inputSample => inputSample.time === serverTime);
+
+    // if inputHistory doesn't have this time, assume we already consumed the server data,
+    // and this just arrived out of order
+    if (!inputAtTime) {
+      return true;
+    }
+
+    const clientPositionAtTime = inputAtTime.position;
+    return utils.objectsAreEqual(clientPositionAtTime, serverPositionAtTime);
+  };
+
+  /**
+   * Called when server disagrees with client's position at a given time.
+   * Adds corrected position and time data to a queue to be merged with client input history
+   * for reconciliation.
+   * Recalculates the player's current position using the server-calculated position as
+   * the starting point and reconciling (reapplying any inputs in history since then).
+   * See: http://www.gabrielgambetta.com/fpm_live.html
+   */
+  // TODO: interpolate and changes smoothly over time
+  player.queuePositionSyncWithServer = function(serverTime, serverPositionAtTime) {
+    // TODO: discard any server data with time we don't have because it's old/out of order?
+    serverReconciliationHistory.push({time: serverTime, position: serverPositionAtTime});
+  };
+
+  player.syncPositionWithServer = function() {
+    if (!serverReconciliationHistory.length) {
+      return;
+    }
+    // merge input history with positions from server
+    inputHistory = inputHistory.map(inputSample => {
+      // look to see if this sample has a corresponding time in the data received from the server
+      const courseCorrection = serverReconciliationHistory.find(reconData => reconData.time === inputSample.time);
+      if (courseCorrection) {
+        return Object.assign({}, inputSample, courseCorrection);
+      } else {
+        return inputSample;
+      }
+    });
+
+    // start with prior position by server authority,
+    // then reapply client inputs since server time to determine player's current reconciled position
+//    const inputHistorySinceServerTime = movement.player.getInputHistorySinceTime(inputHistory, serverTime);
+
+    const newPosition = movement.player.getPositionFromInputHistory(inputHistory);
+    // TODO: interpolate to new position over time!
+    // TODO: isn't there a terser es6 way to do this sort of thing?
+    player.x = newPosition.x;
+    player.y = newPosition.y;
+
+    // purge consumed history
+    const lastReconciledTime = serverReconciliationHistory.last().time;
+//    player.clearInputHistoryBeforeTime(lastReconciledTime);
+    serverReconciliationHistory = [];
+  };
+
+  player.clearInputHistoryBeforeTime = function(time) {
+    const inputHistorySinceTime = function(time) {
+      return inputHistory.filter(inputSample => inputSample.time > time);
+    };
+    inputHistory = inputHistorySinceTime(time);
+  };
+
   player.update = function() {
+    if (!settings.isClient) {
+      return;
+    }
 
     var input = {
       left:   (keys.left.isDown && !keys.right.isDown) ||
@@ -171,8 +219,7 @@ var createPlayer = function createPlayer(game, options) {
               gamepad.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_X) > 0.1 ||
               gamepad.axis(Phaser.Gamepad.XBOX360_STICK_RIGHT_X) > 0.1,
       up:     keys.up.isDown ||
-              gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_UP) ||
-              gamepad.isDown(Phaser.Gamepad.XBOX360_A),
+              gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_UP),
       down:   keys.down.isDown ||
               gamepad.isDown(Phaser.Gamepad.XBOX360_DPAD_DOWN) ||
               gamepad.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_Y) > 0.1 ||
@@ -180,6 +227,7 @@ var createPlayer = function createPlayer(game, options) {
       attack: keys.attack.isDown ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_X) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_Y) ||
+              gamepad.isDown(Phaser.Gamepad.XBOX360_A) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_B) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_LEFT_BUMPER) ||
               gamepad.justPressed(Phaser.Gamepad.XBOX360_LEFT_TRIGGER) ||
@@ -187,52 +235,37 @@ var createPlayer = function createPlayer(game, options) {
               gamepad.justPressed(Phaser.Gamepad.XBOX360_RIGHT_TRIGGER),
     };
 
-    switch (true) {
-      case input.up && !input.down && !input.left && !input.right:
-        actions.run('n');
-        break;
-      case !input.up && input.down && !input.left && !input.right:
-        actions.run('s');
-        break;
-      case !input.up && !input.down && !input.left && input.right:
-        actions.run('e');
-        break;
-      case !input.up && !input.down && input.left && !input.right:
-        actions.run('w');
-        break;
-      case input.up && !input.down && !input.left && input.right:
-        actions.run('ne');
-        break;
-      case input.up && !input.down && input.left && !input.right:
-        actions.run('nw');
-        break;
-      case !input.up && input.down && !input.left && input.right:
-        actions.run('se');
-        break;
-      case !input.up && input.down && input.left && !input.right:
-        actions.run('sw');
-        break;
-    }
+    var direction = movement.player.inputToDirection(input);
+    actions.walk(direction);
 
-    // apply friction
-    function applyFriction(axis) {      
-      if (Math.abs(player.body.velocity[axis]) < 2) {
-        player.body.velocity[axis] *= 0.5; // quickly bring slow-moving players to a stop
-      } else if (player.body.velocity[axis] > 0) {
-        player.body.velocity[axis] -= 2;
-      } else if (player.body.velocity[axis] < 0) {
-        player.body.velocity[axis] += 2;
-      }
-    }
-    applyFriction('x');
-    applyFriction('y');
-
-    if (Math.abs(player.body.velocity.y) === 0 && Math.abs(player.body.velocity.x) === 0) {
-      player.animations.stop();
-    }
+    // client-side prediction:
+    velocity = movement.player.directionToVelocity(direction);
+    var position = physics.getPosition({x: player.x, y: player.y}, velocity, game.time.elapsed);
+    player.x = position.x;
+    player.y = position.y;
 
     if (input.attack) {
       actions.attack();
+    }
+
+    // store player input at fixed intervals
+    const inputSamplesPerSecond = 30;
+    const inputSampleInterval = 1000 / inputSamplesPerSecond;
+    const inputSamplesPerUpload = 5; // how many samples to collect before sending to server
+    if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
+      // TODO: consider removing position from input sample data before sending to server
+      inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
+      lastInputSample = input;
+      lastInputSampleTime = game.time.now;
+
+      // apply any course corrections from the server
+      player.syncPositionWithServer();
+      const shouldUploadSamples = movement.player.getInputHistorySinceTime(inputHistory, latestUploadedInputSampleTime).length >= inputSamplesPerUpload;
+      if (shouldUploadSamples) {
+        // send stored input to server
+        socket.send({type: 'move', inputHistory});
+        latestUploadedInputSampleTime = inputHistory.last().time;
+      }
     }
   };
 

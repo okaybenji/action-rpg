@@ -29,7 +29,6 @@ var Loading = function(game) {
 
     create: function() {
       game.input.gamepad.start();
-
       game.state.add('play', Play(game));
       game.state.start('play');
     }
