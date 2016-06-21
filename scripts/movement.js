@@ -34,7 +34,7 @@ const movement = {
       }
     },
     directionToVelocity(direction) {
-      const moveSpeed = 0.05;
+      const moveSpeed = 0.05; // in pixels per ms
 
       switch (direction) {
         case 'n':
@@ -65,17 +65,18 @@ const movement = {
           return {x: 0, y: 0};
       }
     },
-    getPositionFromInputHistorySinceTime(inputHistory, lastAppliedTime) {
+    getInputHistorySinceTime(inputHistory, time) {
+      return inputHistory.filter(inputSample => inputSample.time >= time);
+    },
+    getPositionFromInputHistory(inputHistory) {
       return inputHistory
-        .filter(inputSample => inputSample.time >= lastAppliedTime)
         .reduce((prev, curr) => {
           const lastMoveDirection = movement.player.inputToDirection(prev.input);
           const velocity = movement.player.directionToVelocity(lastMoveDirection);
           const newPosition = physics.getPosition({x: prev.position.x, y: prev.position.y}, velocity, curr.time - prev.time);
           return Object.assign({}, curr, { position: newPosition });
         })
-        .position
-      ;
+        .position;
     },
   }
 };

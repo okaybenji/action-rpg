@@ -28,9 +28,9 @@ var createPlayer = function createPlayer(game, options) {
     var gamepad = settings.gamepad;
     var lastInputSampleTime = 0;
     var lastInputUploadTime = 0;
-    // lastInputUploadLatestSampleTime is the most recent sample time in inputHistory (the time from the last element in the array)
+    // latestUploadedInputSampleTime is the most recent sample time in inputHistory (the time from the last element in the array)
     // TODO: come up with a better name
-    var lastInputUploadLatestSampleTime = 0;
+    var latestUploadedInputSampleTime = 0;
     var lastInputSample;
     var inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
   }
@@ -171,10 +171,6 @@ var createPlayer = function createPlayer(game, options) {
   // still need to figure out why, in the rare cases it's needed, it's not working as intended.
   player.syncPositionWithServer = function(serverTime, serverPositionAtTime) {
     // TODO: discard any server data with time we don't have because it's old/out of order?
-    // move player back to prior position by server authority
-    player.x = serverPositionAtTime.x;
-    player.y = serverPositionAtTime.y;
-
     // update the captured position stored in inputHistory with the corrected value from the server
     inputHistory = inputHistory.map(inputSample => {
       if (inputSample.time === serverTime) {
@@ -183,9 +179,10 @@ var createPlayer = function createPlayer(game, options) {
       return inputSample;
     });
 
-    // reapply client inputs since server time
-    const newPosition = movement.player.getPositionFromInputHistorySinceTime(inputHistory, serverTime);
-    console.log('reconciling position with server');
+    // start with prior position by server authority,
+    // then reapply client inputs since server time to determine player's current reconciled position
+    const inputHistorySinceServerTime = movement.player.getInputHistorySinceTime(inputHistory, serverTime);
+    const newPosition = movement.player.getPositionFromInputHistory(inputHistorySinceServerTime);
     // TODO: interpolate to new position over time!
     // TODO: isn't there a terser es6 way to do this sort of thing?
     player.x = newPosition.x;
@@ -244,16 +241,21 @@ var createPlayer = function createPlayer(game, options) {
     }
 
     // store player input at fixed intervals
-    var inputSamplesPerSecond = 6;
-    var inputSampleInterval = 1000 / inputSamplesPerSecond;
+    const inputSamplesPerSecond = 60;
+    const inputSampleInterval = 1000 / inputSamplesPerSecond;
+    const inputSamplesPerUpload = 10; // how many samples to collect before sending to server
     if (game.time.now >= lastInputSampleTime + inputSampleInterval) {
       // TODO: consider removing position from input sample data before sending to server
       inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
       lastInputSample = input;
       lastInputSampleTime = game.time.now;
-      // send stored input to server
-      socket.send({type: 'move', inputHistory});
-      lastInputUploadLatestSampleTime = inputHistory[inputHistory.length - 1].time;
+
+      const shouldUploadSamples = movement.player.getInputHistorySinceTime(inputHistory, latestUploadedInputSampleTime).length >= inputSamplesPerUpload;
+      if (shouldUploadSamples) {
+        // send stored input to server
+        socket.send({type: 'move', inputHistory});
+        latestUploadedInputSampleTime = inputHistory[inputHistory.length - 1].time;
+      }
     }
   };
 

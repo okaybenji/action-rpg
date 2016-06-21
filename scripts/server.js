@@ -46,9 +46,11 @@ const idGen = (function() {
 wss.on('connection', function connection(ws) {
   const id = idGen();
   ws.id = id;
-  ws.x = utils.randomIntBetween(0, 256);
-  ws.y = utils.randomIntBetween(0, 240);
-  ws.lastProcessedInput = { input: {}, time: 0, position: { x: ws.x, y: ws.y } };
+  ws.position = {
+    x: utils.randomIntBetween(0, 256),
+    y: utils.randomIntBetween(0, 240)
+  };
+  ws.lastProcessedInput = { input: {}, time: 0, position: ws.position };
 
   // we always want to stringify our data
   // TODO: is there an elegant way to override ws.send to always stringify?
@@ -72,7 +74,7 @@ wss.on('connection', function connection(ws) {
   });
 
   // broadcast our own position (and spawn)
-  wss.broadcast({ type: 'spawn', id, x: ws.x, y: ws.y });
+  wss.broadcast({ type: 'spawn', id, x: ws.position.x, y: ws.position.y });
 
   ws.on('close', function() {
     wss.broadcast({type: 'chat', text: id + ' disconnected'});
@@ -97,15 +99,24 @@ wss.on('connection', function connection(ws) {
          * sending that old history to the server).
          */
         const lastAppliedTime = ws.lastProcessedInput.time;
-        const inputHistory = msg.inputHistory.filter(inputSample => inputSample.time > lastAppliedTime);
+        const inputHistory = movement.player.getInputHistorySinceTime(msg.inputHistory, lastAppliedTime)
+          .map((inputSample, i) => {
+            // overwrite client starting position with server's position for player to prevent cheating
+            if (i === 0) {
+              return Object.assign({}, inputSample, { position: ws.position });
+            } else {
+              return inputSample;
+            }
+          });
+
         if (!inputHistory.length) {
           return; // ignore any old data received out of order
         }
-        const newPosition = movement.player.getPositionFromInputHistorySinceTime(inputHistory, lastAppliedTime);
-        ws.x = newPosition.x;
-        ws.y = newPosition.y;
+
+        const newPosition = movement.player.getPositionFromInputHistory(inputHistory);
+        ws.position = newPosition;
         ws.lastProcessedInput = inputHistory[inputHistory.length - 1];
-        const response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id, position: {x: ws.x, y: ws.y} };
+        const response = { type: 'move', time: ws.lastProcessedInput.time, id: ws.id, position: ws.position };
         const simulatedLag = utils.randomIntBetween(5, 200); // for local debugging (set to 0 before deploying!)
 
         setTimeout(function() {
