@@ -15,6 +15,7 @@ var createPlayer = function createPlayer(game, options) {
   };
 
   var settings = Object.assign({}, defaults, options);
+  var lastInputSample;
 
   if (settings.isClient) {
     var keys = {
@@ -31,7 +32,6 @@ var createPlayer = function createPlayer(game, options) {
     // latestUploadedInputSampleTime is the most recent sample time in inputHistory (the time from the last element in the array)
     // TODO: come up with a better name
     var latestUploadedInputSampleTime = 0;
-    var lastInputSample;
     var serverReconciliationHistory = [];
   }
 
@@ -213,23 +213,49 @@ var createPlayer = function createPlayer(game, options) {
       // TODO: refactor this 'otherPlayer' nonsense
       const time = game.time.now - player.timeOffset;
       var inputSampleAtTime = player.inputHistory.find(inputSample => inputSample.time <= time);
-      if (!inputSampleAtTime) {
-        return;
-      }
 
-      // start appropriate walk animation
-      const direction = movement.player.inputToDirection(inputSampleAtTime.input);
-      player.actions.walk(direction);
-      // update position
-      player.x = inputSampleAtTime.position.x;
-      player.y = inputSampleAtTime.position.y;
-      // attack if appropriate
-      if (inputSampleAtTime.input.attack) {
-        player.actions.attack();
-      }
+      // if we have an input sample at this exact time...
+      if (inputSampleAtTime) {
+        lastInputSample = inputSampleAtTime; // update lastInputSample
+        // start appropriate walk animation
+        const direction = movement.player.inputToDirection(inputSampleAtTime.input);
+        player.actions.walk(direction);
+        // update position
+        player.x = inputSampleAtTime.position.x;
+        player.y = inputSampleAtTime.position.y;
+        // attack if appropriate
+        if (inputSampleAtTime.input.attack) {
+          player.actions.attack();
+        }
 
-      // purge consumed history
-      player.clearInputHistoryBeforeTime(time);
+        // purge consumed history
+        player.clearInputHistoryBeforeTime(time);
+      } else {
+        // otherwise, interpolate player position from last and next input sample
+        // get next input sample
+        const nextInputSample = player.inputHistory.find(inputSample => inputSample.time > time);
+        if (!lastInputSample || !nextInputSample) { // TODO: understand why this would be
+          return;
+        }
+        if (utils.objectsAreEqual(lastInputSample, nextInputSample)) {
+          console.log('skipping update because last and next inputs are the same thing');
+          return; // no need to update!
+        }
+        // weight positions from next sample and last based on their temporal proximity to now
+        const timeBetweenInputs = nextInputSample.time - lastInputSample.time;
+        const lastWeight = (time - lastInputSample.time) / timeBetweenInputs;
+        const nextWeight = (nextInputSample.time - time) / timeBetweenInputs;
+        const x = lastInputSample.position.x * lastWeight + nextInputSample.position.x * nextWeight;
+        const y = lastInputSample.position.y * lastWeight + nextInputSample.position.y * nextWeight;
+        // update player position
+        if (player.x === x && player.y === y) { // TODO: understand why objectsAreEqual check doesn't handle this
+          // console.log('skipping update because position did not change');
+          return;
+        }
+        // console.log('moving player to:', x + ',' + y);
+        player.x = x;
+        player.y = y;
+      }
     }
   };
 
@@ -279,7 +305,7 @@ var createPlayer = function createPlayer(game, options) {
     }
 
     // store player input at fixed intervals
-    const inputSamplesPerSecond = 30;
+    const inputSamplesPerSecond = 60;
     const inputSampleInterval = 1000 / inputSamplesPerSecond;
     const inputSamplesPerUpload = 5; // how many samples to collect before sending to server
     const isTimeToUpdate = game.time.now >= lastInputSampleTime + inputSampleInterval;
