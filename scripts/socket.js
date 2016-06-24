@@ -22,29 +22,34 @@ const createSocket = function() {
           player = players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y, isClient: true});
         } else {
           players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y});
+          //players[msg.id].inputHistory = [];
         }
       },
       move() {
         if (msg.id === id) { // it's us!
           // if the client's position at last received time from server does not match server's
           // reported position, reconcile the player position
-          if (player && !player.positionAtTimeMatchesServer(msg.time, msg.position)) {
-            player.queuePositionSyncWithServer(msg.time, msg.position);
-          }
+          msg.data.forEach(inputSample => {
+            if (player && !player.positionAtTimeMatchesServer(inputSample.time, inputSample.position)) {
+              player.queuePositionSyncWithServer(inputSample.time, inputSample.position);
+            }
+          });
         } else { // it's someone else
           // update position
           // TODO: interpolate over time
           // TODO: implement lag compensation (broadcast input histories and play them back in the past)
           // start appropriate walk animation
-          const direction = movement.player.inputToDirection(msg.input);
-          players[msg.id].actions.walk(direction);
-          // update position
-          players[msg.id].x = msg.position.x;
-          players[msg.id].y = msg.position.y;
-          // attack if appropriate
-          if (msg.input.attack) {
-            players[msg.id].actions.attack();
-          }
+          msg.data.forEach(inputSample => {
+            const direction = movement.player.inputToDirection(inputSample.input);
+            players[msg.id].actions.walk(direction);
+            // update position
+            players[msg.id].x = inputSample.position.x;
+            players[msg.id].y = inputSample.position.y;
+            // attack if appropriate
+            if (inputSample.input.attack) {
+              players[msg.id].actions.attack();
+            }
+          });
         }
       },
       destroy() {

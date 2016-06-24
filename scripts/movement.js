@@ -68,15 +68,18 @@ const movement = {
     getInputHistorySinceTime(inputHistory, time) {
       return inputHistory.filter(inputSample => inputSample.time >= time);
     },
-    getPositionFromInputHistory(inputHistory) {
+    getInputHistoryWithPosition(inputHistory) {
       return inputHistory
-        .reduce((prev, curr) => {
+        .map((inputSample, i) => {
+          if (i === 0) {
+            return inputSample;
+          }
+          const prev = inputHistory[i - 1];
           const lastMoveDirection = movement.player.inputToDirection(prev.input);
           const velocity = movement.player.directionToVelocity(lastMoveDirection);
-          const newPosition = physics.getPosition({x: prev.position.x, y: prev.position.y}, velocity, curr.time - prev.time);
-          return Object.assign({}, curr, { position: newPosition });
-        })
-        .position;
+          const newPosition = physics.getPosition({x: prev.position.x, y: prev.position.y}, velocity, inputSample.time - prev.time);
+          return Object.assign({}, inputSample, { position: newPosition });
+        });
     },
   }
 };

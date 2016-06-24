@@ -113,15 +113,14 @@ wss.on('connection', function connection(ws) {
           return; // ignore any old data received out of order
         }
 
-        const newPosition = movement.player.getPositionFromInputHistory(inputHistory);
+        const inputHistoryWithPosition = movement.player.getInputHistoryWithPosition(inputHistory);
+        const newPosition = inputHistoryWithPosition.last().position;
         ws.position = newPosition;
         ws.lastProcessedInput = inputHistory.last();
         const response = {
           type: 'move',
-          time: ws.lastProcessedInput.time,
           id: ws.id,
-          position: ws.position,
-          input: ws.lastProcessedInput.input
+          data: inputHistoryWithPosition
         };
         const simulatedLag = utils.randomIntBetween(5, 200); // for local debugging (set to 0 before deploying!)
 

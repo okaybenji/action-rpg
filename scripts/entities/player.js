@@ -185,7 +185,7 @@ var createPlayer = function createPlayer(game, options) {
     // then reapply client inputs since server time to determine player's current reconciled position
 //    const inputHistorySinceServerTime = movement.player.getInputHistorySinceTime(inputHistory, serverTime);
 
-    const newPosition = movement.player.getPositionFromInputHistory(inputHistory);
+    const newPosition = movement.player.getInputHistoryWithPosition(inputHistory).last().position;
     // TODO: interpolate to new position over time!
     // TODO: isn't there a terser es6 way to do this sort of thing?
     player.x = newPosition.x;
@@ -249,9 +249,9 @@ var createPlayer = function createPlayer(game, options) {
     }
 
     // store player input at fixed intervals
-    const inputSamplesPerSecond = 6;
+    const inputSamplesPerSecond = 30;
     const inputSampleInterval = 1000 / inputSamplesPerSecond;
-    const inputSamplesPerUpload = 1; // how many samples to collect before sending to server
+    const inputSamplesPerUpload = 5; // how many samples to collect before sending to server
     const isTimeToUpdate = game.time.now >= lastInputSampleTime + inputSampleInterval;
     const inputsHaveChanged = !utils.objectsAreEqual(input, inputHistory.last().input);
     if (isTimeToUpdate || inputsHaveChanged) {
