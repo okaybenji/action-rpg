@@ -122,7 +122,8 @@ wss.on('connection', function connection(ws) {
           id: ws.id,
           data: inputHistoryWithPosition
         };
-        const simulatedLag = utils.randomIntBetween(5, 200); // for local debugging (set to 0 before deploying!)
+        // const simulatedLag = utils.randomIntBetween(5, 200); // for local debugging (set to 0 before deploying!)
+        const simulatedLag = 0;
 
         setTimeout(function() {
           wss.broadcast(response);

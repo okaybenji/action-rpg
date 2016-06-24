@@ -22,7 +22,8 @@ const createSocket = function() {
           player = players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y, isClient: true});
         } else {
           players[msg.id] = createPlayer(game, {x: msg.x, y: msg.y});
-          //players[msg.id].inputHistory = [];
+          // TODO: probably create this in the player module by passing config
+          players[msg.id].inputHistory = [];
         }
       },
       move() {
@@ -35,21 +36,16 @@ const createSocket = function() {
             }
           });
         } else { // it's someone else
-          // update position
-          // TODO: interpolate over time
-          // TODO: implement lag compensation (broadcast input histories and play them back in the past)
-          // start appropriate walk animation
-          msg.data.forEach(inputSample => {
-            const direction = movement.player.inputToDirection(inputSample.input);
-            players[msg.id].actions.walk(direction);
-            // update position
-            players[msg.id].x = inputSample.position.x;
-            players[msg.id].y = inputSample.position.y;
-            // attack if appropriate
-            if (inputSample.input.attack) {
-              players[msg.id].actions.attack();
-            }
-          });
+          // determine offset to convert from other player's local time to ours
+          // NOTE: current implementation is naive --
+          // doesn't account for the time it took other player's message to get to the server
+          // then to us
+          if (!players[msg.id].timeOffset) { // TODO: get time from client and set timeOffset on spawn rather than have this if
+            let playerTime = msg.data.last().time; // TODO: probably create this in the player module by passing config
+            let buffer = 100; // how far in the past other player's actions should appear
+            players[msg.id].timeOffset = (game.time.now + buffer) - playerTime;
+          }
+          players[msg.id].inputHistory = players[msg.id].inputHistory.concat(msg.data);
         }
       },
       destroy() {

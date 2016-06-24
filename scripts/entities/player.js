@@ -32,7 +32,6 @@ var createPlayer = function createPlayer(game, options) {
     // TODO: come up with a better name
     var latestUploadedInputSampleTime = 0;
     var lastInputSample;
-    var inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
     var serverReconciliationHistory = [];
   }
 
@@ -132,6 +131,7 @@ var createPlayer = function createPlayer(game, options) {
   player.orientation = settings.orientation;
   player.x = settings.x;
   player.y = settings.y;
+  player.inputHistory = [{ input: {}, time: 0, position: { x: settings.x, y: settings.y } }];
 
   // track health
   player.hp = player.maxHp = 6;
@@ -140,7 +140,7 @@ var createPlayer = function createPlayer(game, options) {
   player.lastAttacked = 0;
 
   player.positionAtTimeMatchesServer = function(serverTime, serverPositionAtTime) {
-    const inputAtTime = inputHistory.find(inputSample => inputSample.time === serverTime);
+    const inputAtTime = player.inputHistory.find(inputSample => inputSample.time === serverTime);
 
     // if inputHistory doesn't have this time, assume we already consumed the server data,
     // and this just arrived out of order
@@ -171,7 +171,7 @@ var createPlayer = function createPlayer(game, options) {
       return;
     }
     // merge input history with positions from server
-    inputHistory = inputHistory.map(inputSample => {
+    player.inputHistory = player.inputHistory.map(inputSample => {
       // look to see if this sample has a corresponding time in the data received from the server
       const courseCorrection = serverReconciliationHistory.find(reconData => reconData.time === inputSample.time);
       if (courseCorrection) {
@@ -185,7 +185,7 @@ var createPlayer = function createPlayer(game, options) {
     // then reapply client inputs since server time to determine player's current reconciled position
 //    const inputHistorySinceServerTime = movement.player.getInputHistorySinceTime(inputHistory, serverTime);
 
-    const newPosition = movement.player.getInputHistoryWithPosition(inputHistory).last().position;
+    const newPosition = movement.player.getInputHistoryWithPosition(player.inputHistory).last().position;
     // TODO: interpolate to new position over time!
     // TODO: isn't there a terser es6 way to do this sort of thing?
     player.x = newPosition.x;
@@ -199,13 +199,43 @@ var createPlayer = function createPlayer(game, options) {
 
   player.clearInputHistoryBeforeTime = function(time) {
     const inputHistorySinceTime = function(time) {
-      return inputHistory.filter(inputSample => inputSample.time > time);
+      return player.inputHistory.filter(inputSample => inputSample.time > time);
     };
-    inputHistory = inputHistorySinceTime(time);
+    player.inputHistory = inputHistorySinceTime(time);
+  };
+
+  const otherPlayer = {
+    update() {
+      // plays back other players' movements a fixed time in the past
+
+      // TODO: interpolate positions over time -- if we are between input times,
+      // get the weighted position between the two based on the current time
+      // TODO: refactor this 'otherPlayer' nonsense
+      const time = game.time.now - player.timeOffset;
+      var inputSampleAtTime = player.inputHistory.find(inputSample => inputSample.time <= time);
+      if (!inputSampleAtTime) {
+        return;
+      }
+
+      // start appropriate walk animation
+      const direction = movement.player.inputToDirection(inputSampleAtTime.input);
+      player.actions.walk(direction);
+      // update position
+      player.x = inputSampleAtTime.position.x;
+      player.y = inputSampleAtTime.position.y;
+      // attack if appropriate
+      if (inputSampleAtTime.input.attack) {
+        player.actions.attack();
+      }
+
+      // purge consumed history
+      player.clearInputHistoryBeforeTime(time);
+    }
   };
 
   player.update = function() {
     if (!settings.isClient) {
+      otherPlayer.update();
       return;
     }
 
@@ -253,20 +283,20 @@ var createPlayer = function createPlayer(game, options) {
     const inputSampleInterval = 1000 / inputSamplesPerSecond;
     const inputSamplesPerUpload = 5; // how many samples to collect before sending to server
     const isTimeToUpdate = game.time.now >= lastInputSampleTime + inputSampleInterval;
-    const inputsHaveChanged = !utils.objectsAreEqual(input, inputHistory.last().input);
+    const inputsHaveChanged = !utils.objectsAreEqual(input, player.inputHistory.last().input);
     if (isTimeToUpdate || inputsHaveChanged) {
       // TODO: consider removing position from input sample data before sending to server
-      inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
+      player.inputHistory.push({input, time: game.time.now, position: {x: player.x, y: player.y}});
       lastInputSample = input;
       lastInputSampleTime = game.time.now;
 
       // apply any course corrections from the server
       player.syncPositionWithServer();
-      const shouldUploadSamples = movement.player.getInputHistorySinceTime(inputHistory, latestUploadedInputSampleTime).length >= inputSamplesPerUpload;
+      const shouldUploadSamples = movement.player.getInputHistorySinceTime(player.inputHistory, latestUploadedInputSampleTime).length >= inputSamplesPerUpload;
       if (shouldUploadSamples) {
         // send stored input to server
-        socket.send({type: 'move', inputHistory});
-        latestUploadedInputSampleTime = inputHistory.last().time;
+        socket.send({type: 'move', inputHistory: player.inputHistory});
+        latestUploadedInputSampleTime = player.inputHistory.last().time;
       }
     }
   };
