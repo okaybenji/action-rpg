@@ -5,7 +5,8 @@ const physics = {
   getPosition(priorPosition, velocity, deltaTime) {
     const x = this.getValue(priorPosition.x, velocity.x, deltaTime);
     const y = this.getValue(priorPosition.y, velocity.y, deltaTime);
-    return {x, y};
+    // TODO: reuse utils.roundToFixed
+    return {x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100};
   }
 };
 

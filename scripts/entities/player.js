@@ -183,11 +183,9 @@ var createPlayer = function createPlayer(game, options) {
 
     // start with prior position by server authority,
     // then reapply client inputs since server time to determine player's current reconciled position
-//    const inputHistorySinceServerTime = movement.player.getInputHistorySinceTime(inputHistory, serverTime);
 
     const newPosition = movement.player.getInputHistoryWithPosition(player.inputHistory).last().position;
     // TODO: interpolate to new position over time!
-    // TODO: isn't there a terser es6 way to do this sort of thing?
     player.x = newPosition.x;
     player.y = newPosition.y;
 
@@ -207,9 +205,10 @@ var createPlayer = function createPlayer(game, options) {
   const otherPlayer = {
     update() {
       // plays back other players' movements a fixed time in the past
-
-      // TODO: interpolate positions over time -- if we are between input times,
+      // interpolates positions over time -- if we are between input times,
       // get the weighted position between the two based on the current time
+      // TODO: this doesn't seem to be working as designed... movement is
+      // only smooth if we capture input at 60hz
       // TODO: refactor this 'otherPlayer' nonsense
       const time = game.time.now - player.timeOffset;
       var inputSampleAtTime = player.inputHistory.find(inputSample => inputSample.time <= time);
@@ -221,15 +220,18 @@ var createPlayer = function createPlayer(game, options) {
         const direction = movement.player.inputToDirection(inputSampleAtTime.input);
         player.actions.walk(direction);
         // update position
-        player.x = inputSampleAtTime.position.x;
-        player.y = inputSampleAtTime.position.y;
+        if (player.x !== inputSampleAtTime.position.x || player.y !== inputSampleAtTime.position.y) {
+//          console.log('moving playing to:', inputSampleAtTime.position);
+          player.x = inputSampleAtTime.position.x;
+          player.y = inputSampleAtTime.position.y;
+        }
         // attack if appropriate
         if (inputSampleAtTime.input.attack) {
           player.actions.attack();
         }
 
         // purge consumed history
-        player.clearInputHistoryBeforeTime(time);
+        player.clearInputHistoryBeforeTime(inputSampleAtTime.time);
       } else {
         // otherwise, interpolate player position from last and next input sample
         // get next input sample
@@ -237,24 +239,25 @@ var createPlayer = function createPlayer(game, options) {
         if (!lastInputSample || !nextInputSample) { // TODO: understand why this would be
           return;
         }
-        if (utils.objectsAreEqual(lastInputSample, nextInputSample)) {
-          console.log('skipping update because last and next inputs are the same thing');
+        if (utils.objectsAreEqual(lastInputSample.input, nextInputSample.input)) {
           return; // no need to update!
         }
         // weight positions from next sample and last based on their temporal proximity to now
         const timeBetweenInputs = nextInputSample.time - lastInputSample.time;
         const lastWeight = (time - lastInputSample.time) / timeBetweenInputs;
         const nextWeight = (nextInputSample.time - time) / timeBetweenInputs;
-        const x = lastInputSample.position.x * lastWeight + nextInputSample.position.x * nextWeight;
-        const y = lastInputSample.position.y * lastWeight + nextInputSample.position.y * nextWeight;
+        let x = lastInputSample.position.x * lastWeight + nextInputSample.position.x * nextWeight;
+        let y = lastInputSample.position.y * lastWeight + nextInputSample.position.y * nextWeight;
+        x = utils.roundToFixed(x, 2);
+        y = utils.roundToFixed(y, 2)
         // update player position
-        if (player.x === x && player.y === y) { // TODO: understand why objectsAreEqual check doesn't handle this
-          // console.log('skipping update because position did not change');
-          return;
+        // skip position update if position did not change
+        // (e.g. player just attacked, or initiated movement but buffer time hasn't passed yet)
+        if (player.x !== x && player.y !== y) {
+          player.x = x;
+          player.y = y;
+//          console.log('moving player to:', player.x + ',' + player.y);
         }
-        // console.log('moving player to:', x + ',' + y);
-        player.x = x;
-        player.y = y;
       }
     }
   };

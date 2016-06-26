@@ -6,7 +6,7 @@
 * Compensate for length of sword when player attacks west or north
 * Eliminate bug which occasionally causes player animation to stick
 * Improve position reconciliation
-* Figure out why lag compensation isn't smooth unless input sample rate is 60hz! Also figure out why it's not silky smooth with a buffer time of 100ms versus 1 sec (which I think looks perfect).
+* Figure out why lag compensation isn't smooth unless input sample rate is 60hz! Also figure out why it's not silky smooth with a buffer time of 100ms versus 1 sec (which I think looks perfect). UPDATE: at 60hz, the position is always updated directly to the position in the input sample and never interpolating between two points in history. so the interpolation is not working as planned.
 
 ### Near-future features
 * Interpolate player to server recon position

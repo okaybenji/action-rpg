@@ -29,6 +29,10 @@ const utils = {
 
   objectsAreEqual(objA, objB) {
     return JSON.stringify(objA) === JSON.stringify(objB);
+  },
+
+  roundToFixed(number, decimals) {
+    return Math.round(number * Math.pow(10, decimals)) / Math.pow(10, decimals)
   }
 };
 
