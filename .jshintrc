@@ -1,3 +1,13 @@
 {
-    "esnext": true
+  "esversion": 6,
+  "browser": true,
+  "globals": {
+    "Phaser" : true,
+    "ws" : true,
+    "utils" : true,
+    "chat" : true,
+    "createPlayer" : true,
+    "Loading" : true,
+    "Play" : true
+  }
 }

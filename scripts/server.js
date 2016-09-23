@@ -1,3 +1,5 @@
+/* jshint node: true */
+
 'use strict';
 
 const WebSocketServer = require('ws').Server;
