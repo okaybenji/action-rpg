@@ -1,5 +1,10 @@
 ## TODO
 
+### Start over
+* Rather than (or before) working through the rest of this to-do list, scrap most of the work so far. Decouple player from input. Client-controlled player and other players should use the same player factory. Player should expose an API with methods like 'move' which, depending on arguments passed to it, may, e.g. start or stop a player moving downward. The client-controlled player will be created by a separate module which will trigger its method via keyboard/mouse/gamepad input and also send messages to the server about which methods it is triggering and when. The server will calculate the delay between the time the client sent the message and when the server received it (figure out how to do this!) and then broadcast other players' commands (with args) and the times at which they should be executed on the clients (e.g. 100ms after input, for lag compensation).
+* The server should also be processing all player commands to arrive at an authoritative state with entity positions, health, etc. and broadcasting this state at regular intervals. Client will check to see if its state agrees with the broadcasted state and, if not, interpolate to corrected state, reapplying the time passed and client input collected since then. Client and server should use the same functions to determine the current states of all entities and thus should agree on state most of the time.
+* See how well this works, then decide how to move forward!
+
 ### Bug fixes
 * There seems to be an issue in which newly connecting players cannot see other players until they have switched tabs away from the loaded page, then switch back. Recall that last time something like this happened, it was because you were failing to wait for the game to load before spawning players. That was causing a phaser error about assets not yet being in cache, though. This issue is not causing an error. (Note: Previously thought this worked fine locally. It does not. I had separate windows instead of tabs going so I didn't see the issue.)
 * Refactored logging code causes 'user-such-and-such connected' to be logged for every user each time a new user connects.
