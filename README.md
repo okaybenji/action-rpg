@@ -1,6 +1,6 @@
 This is a test of a real-time multiplayer action RPG in the vein of The Legend of Zelda. I was attempting to implement QuakeWorld-style networking for a 2D game in JavaScript.
 
-I stopped working on it a while ago. It will support multiple players connecting, moving around, and chatting with one another.
+I stopped working on it a while ago. In its current state, it supports multiple players connecting, moving around, and chatting with one another.
 
 Here are my notes on what is needed for QuakeWorld-style network code:
 
