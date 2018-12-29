@@ -21,16 +21,16 @@ The client should not try to predict the state of entities such as other players
 ## Smoothing
 This is a form of interpolation that applies to the client player and is applied when a prediction error occurs. Even with reconciliation, the client’s change in position/other state during recon may be jarring. Thus, the client should interpolate its current state to the corrected state over time.
 
-## Delta Compression
+## Delta compression
 Data is compressed by only sending the entire world state upon connection and after service disruption. At other times, only that data which has changed is transmitted.
 
-## Other Data Compression?
+## Other data compression?
 This may not be necessary in our current age, and may increase the load on the server. But ideally the data traveling between client and server would be compressed before it is transmitted and then uncompressed before being processed.
 
-## Fake Lag Setting for Debugging
+## Fake lag setting for debugging
 Allow developers to enable artificial latency for testing out the network code and its compatibility with the game code.
 
-## More Info
+## More info
 
 For a slightly more in-depth discussion along with some code samples, see: http://www.gabrielgambetta.com/fast_paced_multiplayer.html
 
